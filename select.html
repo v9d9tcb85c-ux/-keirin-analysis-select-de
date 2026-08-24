@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>WINTICKET SMART FINDER SELECT / 資金管理 v0.5</title>
+<style>
+:root{
+  --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
+  --cyan:#87ecff; --blue:#6c8bff; --purple:#b07bff; --gold:#ffd86d; --green:#49e0a2; --red:#ff758d;
+  --white:#f7fbff; --muted:#b0b9dc; --glow:0 0 0 1px rgba(176,123,255,.24), 0 0 44px rgba(108,139,255,.20), 0 0 86px rgba(176,123,255,.18), 0 18px 48px rgba(0,0,0,.40);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;color:var(--white);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic UI",sans-serif;min-height:100vh;background:
+ radial-gradient(circle at 14% 8%, rgba(135,236,255,.22) 0 0.85%, transparent 1%),
+ radial-gradient(circle at 80% 12%, rgba(176,123,255,.24) 0 1.15%, transparent 1.25%),
+ radial-gradient(circle at 42% 12%, rgba(166,119,255,.18) 0 0.82%, transparent 0.95%),
+ radial-gradient(72% 54% at 50% -4%, rgba(74,93,230,.40) 0%, transparent 72%),
+ radial-gradient(54% 40% at 100% 0%, rgba(138,78,255,.34) 0%, transparent 78%),
+ linear-gradient(180deg, #0c1030 0%, #090d24 36%, #040716 100%);
+ overflow-x:hidden}
+body::before,body::after{content:"";position:fixed;inset:auto;pointer-events:none;z-index:0}
+body::before{top:-90px;left:-60px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle, rgba(135,236,255,.18), transparent 64%);filter:blur(8px)}
+body::after{top:-120px;right:-70px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle, rgba(176,123,255,.24), transparent 66%);filter:blur(12px)}
+button,input,select,textarea{font:inherit}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#d8f5ff}
+.app{position:relative;z-index:1;max-width:1180px;margin:auto;padding:18px 14px 96px}
+.commandHero{background:
+ linear-gradient(135deg, rgba(15,20,58,.98), rgba(14,23,58,.98) 42%, rgba(29,21,72,.98) 100%),
+ radial-gradient(circle at 18% 12%, rgba(135,236,255,.12), transparent 24%),
+ radial-gradient(circle at 52% 18%, rgba(108,139,255,.14), transparent 34%),
+ radial-gradient(circle at 88% 8%, rgba(176,123,255,.18), transparent 30%);
+ border:1px solid rgba(176,123,255,.28); border-radius:30px; box-shadow:var(--glow); padding:20px; margin-bottom:16px; overflow:hidden; position:relative}
+.commandHero:before{content:"";position:absolute;inset:0;background:linear-gradient(120deg, transparent 0 16%, rgba(255,255,255,.07) 28%, transparent 44% 100%);pointer-events:none}
+.heroGrid{display:grid;grid-template-columns:1.2fr .75fr 1fr;gap:14px;align-items:center}
+.heroCol{position:relative;z-index:1}
+.titleWrap{display:flex;align-items:center;gap:12px}
+.logoBox{width:62px;height:62px;border-radius:20px;display:grid;place-items:center;font-size:28px;font-weight:900;color:#07101f;background:linear-gradient(135deg,#95f2ff 0%, #83ddff 24%, #7a9eff 58%, #a278ff 100%);box-shadow:0 0 36px rgba(176,123,255,.24), 0 0 22px rgba(135,236,255,.24)}
+.eyebrow{font-size:10px;letter-spacing:.18em;color:#cab8ff;font-weight:800;margin-bottom:4px;text-transform:uppercase;text-shadow:0 0 14px rgba(176,123,255,.20)}
+.heroMainTitle{font-size:27px;line-height:1.06;font-weight:900;letter-spacing:.06em;margin:0}
+.heroSub{margin:7px 0 0;color:#d0d8f8;font-size:12px;line-height:1.62}
+.heroHints{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.hintChip{padding:7px 10px;border-radius:999px;border:1px solid rgba(176,123,255,.30);background:linear-gradient(180deg, rgba(16,18,46,.88), rgba(9,12,30,.88));font-size:10px;color:#e8ddff;box-shadow:inset 0 0 10px rgba(176,123,255,.06)}
+.trophyZone{display:grid;place-items:center;position:relative}
+.trophyHalo{width:178px;height:178px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 48%, rgba(145,227,255,.26), rgba(108,139,255,.18) 40%, rgba(176,123,255,.24) 58%, rgba(8,18,35,0) 74%);border:1px solid rgba(176,123,255,.24);box-shadow:0 0 68px rgba(108,139,255,.24), 0 0 34px rgba(176,123,255,.18)}
+.trophyCore{width:124px;height:124px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg, rgba(34,34,98,.96), rgba(14,21,58,.96));border:1px solid rgba(176,123,255,.34);box-shadow:inset 0 0 22px rgba(135,236,255,.16), inset 0 0 36px rgba(176,123,255,.10), 0 0 34px rgba(176,123,255,.12);font-size:56px;filter:hue-rotate(216deg) saturate(1.55)}
+.statusCard{background:linear-gradient(180deg, rgba(20,20,55,.92), rgba(8,12,31,.94));border:1px solid rgba(176,123,255,.24);border-radius:22px;padding:15px;box-shadow:inset 0 0 28px rgba(176,123,255,.06)}
+.statusTitle{font-size:11px;color:#d8c8ff;font-weight:850;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+.statusRow{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(179,164,235,.12)}
+.statusRow:last-child{border-bottom:0;padding-bottom:0}
+.statusRow b{display:block;font-size:14px}
+.statusRow span{font-size:10px;color:var(--muted);display:block;margin-top:2px}
+.liveBadge{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:#e9ddff;border:1px solid rgba(176,123,255,.30);background:rgba(34,18,58,.66);padding:6px 10px;border-radius:999px}
+.liveDot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px rgba(73,224,162,.75)}
+.section{margin:14px 0}
+.sectionHead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 9px}
+.section h3{font-size:13px;margin:0;letter-spacing:.08em}
+.section h3 span{color:var(--cyan)}
+.btn{border:1px solid rgba(131,150,255,.38);background:linear-gradient(180deg,#171f4a,#0d1433);color:var(--white);padding:9px 12px;border-radius:12px;font-weight:760;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.18)}
+.btn.primary{background:linear-gradient(135deg,#7ce9ff 0%, #5b90ff 42%, #986fff 100%);border-color:#d2beff;color:#07101f}
+.btn.save{background:linear-gradient(135deg,#47d5ff 0%, #5f88ff 48%, #9a71ff 100%);border-color:#d3beff;color:#08101f}
+.btn.warn{background:linear-gradient(180deg,#34280b,#221805);border-color:#987622;color:var(--gold)}
+.btn.danger{background:linear-gradient(180deg,#37121b,#261018);border-color:#8d2a41;color:#ffabc0}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.badge{font-size:10px;border-radius:999px;padding:5px 8px;border:1px solid #2b5375;color:#c4ebff;background:rgba(7,21,34,.85)}
+.badge.gold{border-color:#8a6b1d;color:var(--gold);background:rgba(38,30,7,.88)}
+.badge.green{border-color:#217456;color:var(--green);background:rgba(8,37,27,.86)}
+.badge.red{border-color:#8b2f42;color:#ff9fb2;background:rgba(38,11,19,.88)}
+.badge.gray{color:#9cb0c5;border-color:#33495e}
+.heroPanel,.nextCard,.raceCard,.candidate,.settingsCard,.historyCard,.kpi{background:linear-gradient(180deg, rgba(17,22,53,.98), rgba(8,12,31,.98));border:1px solid rgba(176,123,255,.18);border-radius:18px;box-shadow:0 10px 28px rgba(0,0,0,.24)}
+.heroPanel{padding:16px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.kpi{padding:12px}
+.kpi .lab{font-size:10px;color:var(--muted)}
+.kpi .val{font-size:22px;font-weight:850;margin-top:4px}
+.kpi .sub{font-size:10px;color:#c9bbff;margin-top:4px}
+.profit{color:var(--green)} .loss{color:var(--red)}
+.nextCard,.raceCard,.candidate,.settingsCard,.historyCard{padding:14px}
+.nextTop,.raceTop,.candTop{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.raceName{font-size:18px;font-weight:900;letter-spacing:.02em}
+.raceMeta{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.45}
+.amountBig{font-weight:900;font-size:22px;color:var(--gold);text-align:right}
+.amountBig small{display:block;color:var(--muted);font-size:9px}
+.tagRow{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.infoGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}
+.mini{background:#0a1130;border:1px solid rgba(176,123,255,.16);border-radius:12px;padding:8px}
+.mini b{display:block;font-size:13px}
+.mini span{color:var(--muted);font-size:9px}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.raceList,.candidateList,.historyList{display:grid;gap:9px}
+.candidate{position:relative}
+.candTop h4{margin:0 0 3px;font-size:15px}
+.candDesc{font-size:10px;color:var(--muted);line-height:1.6}
+.toggle{width:54px;height:30px;border-radius:999px;background:#162536;border:1px solid #35506c;position:relative;flex:0 0 auto;cursor:not-allowed;opacity:.6;box-shadow:inset 0 0 12px rgba(0,0,0,.25)}
+.toggle i{position:absolute;width:22px;height:22px;left:4px;top:3px;border-radius:50%;background:#7b8ea2;transition:.2s;box-shadow:0 2px 10px rgba(0,0,0,.24)}
+.toggle.on{background:linear-gradient(90deg,#3b2f7f,#6b4de2);border-color:#b07bff}
+.toggle.on i{left:27px;background:var(--green)}
+.editing .toggle{cursor:pointer;opacity:1}
+.lockbar{display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(15,18,45,.86);border:1px dashed rgba(176,123,255,.30);border-radius:14px;padding:10px 11px;margin-bottom:8px;font-size:11px;color:#d0d5f0}
+.unsaved{color:var(--gold);font-weight:850}
+.page{display:none}.page.active{display:block}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(9,10,28,.96);backdrop-filter:blur(18px);border-top:1px solid rgba(176,123,255,.18);padding:8px max(8px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));z-index:20}
+.tabin{max-width:1180px;margin:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.tab{border:0;background:transparent;color:#6f89a4;padding:7px 2px;border-radius:12px;font-size:10px}
+.tab b{display:block;font-size:17px;margin-bottom:2px}
+.tab.active{color:#efe4ff;background:linear-gradient(180deg, rgba(32,28,76,.96), rgba(15,18,48,.96));box-shadow:inset 0 0 0 1px rgba(176,123,255,.20), 0 0 20px rgba(176,123,255,.10)}
+.empty{padding:22px 12px;text-align:center;color:var(--muted);border:1px dashed rgba(103,232,255,.22);border-radius:14px;background:rgba(4,12,24,.45)}
+.formRow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.field label{display:block;font-size:10px;color:var(--muted);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;background:#0b1230;color:var(--white);border:1px solid rgba(176,123,255,.18);border-radius:12px;padding:10px;outline:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
+.field textarea{min-height:120px;resize:vertical}
+.note{font-size:10px;line-height:1.62;color:var(--muted)}
+.historyCard{font-size:11px}.historyCard strong{color:var(--cyan)}
+.chart{height:120px;display:flex;align-items:end;gap:4px;padding-top:10px}
+.bar{flex:1;background:linear-gradient(180deg,var(--cyan),#275ee0);border-radius:6px 6px 2px 2px;min-height:4px;opacity:.82;box-shadow:0 0 12px rgba(103,232,255,.18)}
+.modalWrap{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.modalWrap.show{display:flex}
+.modal{width:min(720px,100%);max-height:85vh;overflow:auto;background:linear-gradient(180deg,#0a172d,#081323);border:1px solid rgba(103,232,255,.24);border-radius:24px 24px 0 0;padding:16px 14px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -24px 60px rgba(0,0,0,.5)}
+.modal h3{margin:0 0 12px}.modalBtns{display:flex;gap:8px;margin-top:12px}.modalBtns .btn{flex:1}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:92px;background:linear-gradient(180deg,#0b2840,#081d31);border:1px solid #3b8fc0;color:#e8fbff;padding:10px 14px;border-radius:12px;z-index:80;display:none;font-size:12px;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+.toast.show{display:block}
+.pageHero{padding:14px 16px 15px;margin-bottom:14px}
+.pageHeroTitle{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.pageHero h2{margin:4px 0 0;font-size:20px}
+.rule{font-size:11px;color:#c4baf1;text-align:right;line-height:1.48}
+
+.syncPanel{background:linear-gradient(180deg,rgba(11,24,50,.97),rgba(7,14,34,.97));border:1px solid rgba(176,123,255,.22);border-radius:18px;padding:13px;box-shadow:0 10px 28px rgba(0,0,0,.22)}
+.syncTop{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.syncTitle{font-size:12px;color:#d8c8ff;font-weight:900;letter-spacing:.08em}
+.syncDetail{font-size:10px;color:var(--muted);line-height:1.55;margin-top:4px}
+.syncActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.linkState{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;border:1px solid rgba(176,123,255,.24);font-size:10px;color:#cfd8ee;background:rgba(12,14,36,.8)}
+.linkState.online{color:#a9ffdc;border-color:rgba(73,224,162,.35);background:rgba(6,31,24,.7)}
+.linkState.offline{color:#ff9eb0;border-color:rgba(255,117,141,.35);background:rgba(42,10,20,.7)}
+@media(max-width:920px){.heroGrid{grid-template-columns:1fr;}.trophyHalo{width:150px;height:150px;margin:auto}.statusCard{order:3}.heroMainTitle{font-size:22px}}
+@media(max-width:680px){.app{padding-top:12px}.kpis{grid-template-columns:repeat(2,1fr)}.pageHero h2{font-size:17px}.rule{font-size:9px}.infoGrid{grid-template-columns:repeat(3,1fr)}.formRow{grid-template-columns:1fr}.heroMainTitle{font-size:20px}.heroSub{font-size:11px}.logoBox{width:52px;height:52px;font-size:23px}.commandHero{padding:16px}.titleWrap{align-items:flex-start}.statusRow b{font-size:13px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="commandHero">
+    <div class="heroGrid">
+      <div class="heroCol">
+        <div class="titleWrap">
+          <div class="logoBox">W</div>
+          <div>
+            <div class="eyebrow">WINTICKET SMART FINDER SYSTEM</div>
+            <h1 class="heroMainTitle">SMART FINDER SELECT</h1>
+            <p class="heroSub">今使っているSMART FINDER本体の上部イメージに寄せて、<br>SELECTと資金管理まで一体UIに見えるように再構成した統合画面。</p>
+          </div>
+        </div>
+        <div class="heroHints">
+          <span class="hintChip">SMART FINDER</span>
+          <span class="hintChip">SELECT BOARD</span>
+          <span class="hintChip">CAPITAL MANAGER v0.5</span>
+          <span class="hintChip">RESULT CHECK</span>
+        </div>
+      </div>
+      <div class="heroCol trophyZone">
+        <div class="trophyHalo"><div class="trophyCore">🏆</div></div>
+      </div>
+      <div class="heroCol">
+        <div class="statusCard">
+          <div class="statusTitle">Today’s Target / AI Status</div>
+          <div class="statusRow"><div><b>F2 M / D / N / MN</b><span>SMART FINDERと同系統の表示役割</span></div><span class="badge">TARGET</span></div>
+          <div class="statusRow"><div><b>初期運用：主力＋補完</b><span>大穴A/Bは追試枠として別管理</span></div><span class="badge gold">SELECT 2</span></div>
+          <div class="statusRow"><div><b>AI予想公開後に結果管理</b><span>投票・払戻・資金更新まで接続</span></div><span class="liveBadge"><i class="liveDot"></i>SMART READY</span></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="home" class="page active">
+    <section class="heroPanel pageHero">
+      <div class="pageHeroTitle"><div><div class="eyebrow">SMART FINDER / SELECT / CAPITAL</div><h2>資金サマリー</h2></div><div class="rule">開始 30,000円<br>30,000〜59,999 → 1,000円/点<br>60,000〜89,999 → 1,500円/点<br>90,000〜 → 2,000円/点</div></div>
+      <div class="kpis" id="homeKpis"></div>
+    </section>
+    <section class="section"><div class="sectionHead"><h3><span>SMART FINDER LINK</span> 検索結果連携</h3><span id="sfLinkState" class="linkState">確認中</span></div>
+      <div class="syncPanel">
+        <div class="syncTop"><div><div class="syncTitle">SMART FINDER 自動取込</div><div id="sfSyncDetail" class="syncDetail">同じRender上のSMART FINDERを確認しています。</div></div><span id="sfSyncCount" class="badge">0件取込</span></div>
+        <div class="syncActions"><button class="btn primary" id="sfStartBtn">SMART FINDER検索開始</button><button class="btn" id="sfRetryBtn">今日を再検索</button><button class="btn danger" id="sfStopBtn" style="display:none">検索停止</button></div>
+      </div>
+    </section>
+    <section class="section"><div class="sectionHead"><h3><span>NEXT TARGET</span> 次の対象レース</h3></div><div id="nextRace"></div></section>
+    <section class="section"><div class="sectionHead"><h3><span>TODAY'S BOARD</span> 本日の対象</h3><span class="badge" id="todayCountBadge">0件</span></div><div class="raceList" id="todayRaces"></div></section>
+    <section class="section"><div class="sectionHead"><h3><span>CAPITAL TRACE</span> 資金推移</h3></div><div class="settingsCard"><div id="capitalChart" class="chart"></div><div class="note" id="capitalNote"></div></div></section>
+  </main>
+
+  <main id="select" class="page">
+    <section class="heroPanel pageHero"><div class="pageHeroTitle"><div><div class="eyebrow">SMART FINDER SELECT</div><h2>利益候補ボード</h2></div><div class="rule">本体と同じ雰囲気で<br>候補ON/OFFを管理</div></div></section>
+    <section class="section"><div class="sectionHead"><h3><span>SELECT</span> 利益候補ボード</h3><span class="badge" id="savedCount"></span></div>
+      <div class="lockbar"><span id="lockState">🔒 設定ロック中</span><button class="btn" id="editCandidates">設定を変更する</button></div>
+      <div id="unsaved" class="lockbar" style="display:none"><span class="unsaved">⚠ 未保存の変更あり</span><button class="btn save" id="saveCandidates">この設定を保存</button></div>
+      <div class="candidateList" id="candidateList"></div>
+    </section>
+    <section class="section"><div class="sectionHead"><h3><span>BACKUP</span> 設定履歴</h3></div><div class="historyList" id="settingHistory"></div></section>
+  </main>
+
+  <main id="history" class="page">
+    <section class="heroPanel pageHero"><div class="pageHeroTitle"><div><div class="eyebrow">SMART FINDER RESULT TRACKER</div><h2>レース履歴</h2></div><div class="rule">検索 → 選択 → 投票 → 結果を<br>一体UIで追跡</div></div></section>
+    <section class="section"><div class="sectionHead"><h3><span>HISTORY</span> レース履歴</h3></div><div class="raceList" id="allHistory"></div></section>
+  </main>
+
+  <main id="stats" class="page">
+    <section class="heroPanel pageHero"><div class="pageHeroTitle"><div><div class="eyebrow">SMART FINDER PERFORMANCE</div><h2>運用統計</h2></div><div class="rule">本体の流れに沿って<br>候補別成績を集計</div></div><div class="kpis" id="statsKpis"></div></section>
+    <section class="section"><div class="settingsCard"><h3 style="margin-top:0">候補別成績</h3><div id="candidateStats" class="historyList"></div></div></section>
+  </main>
+
+  <main id="settings" class="page">
+    <section class="heroPanel pageHero"><div class="pageHeroTitle"><div><div class="eyebrow">SMART FINDER LINK & SETUP</div><h2>資金設定 / 連携設定</h2></div><div class="rule">SMART FINDER本体との接続も含めて<br>裏側設定をまとめて管理</div></div></section>
+    <section class="section"><div class="sectionHead"><h3><span>SETTINGS</span> 資金設定</h3></div><div class="settingsCard">
+      <div class="lockbar"><span id="moneyLockState">🔒 資金設定ロック中</span><button class="btn" id="editMoney">編集する</button></div>
+      <div class="formRow"><div class="field"><label>開始資金</label><select id="startFunds" disabled><option value="10000">10,000円</option><option value="20000">20,000円</option><option value="30000">30,000円</option><option value="50000">50,000円</option><option value="100000">100,000円</option></select></div><div class="field"><label>現在資金</label><input id="currentFunds" type="number" disabled></div></div>
+      <p class="note">現在資金は投票・払戻の確定で自動更新し、直接変更しません。初期運用は30,000円開始。現在資金に応じて1,000 / 1,500 / 2,000円/点へ自動で上下し、90,000円以上は2,000円/点を上限とします。</p>
+      <button class="btn save" id="saveMoney" style="display:none;width:100%">資金設定を保存</button>
+    </div></section>
+    <section class="section"><div class="sectionHead"><h3><span>IMPORT</span> SMART FINDER結果受信</h3></div><div class="settingsCard">
+      <p class="note">将来SMART FINDERから自動で渡せる受け口を先に用意しています。今はJSON貼付またはファイル読込で確認できます。同一「開催日＋開催場＋R」は重複登録せず、候補だけ同じカードへ追加します。</p>
+      <div class="field"><label>検索結果JSON</label><textarea id="importJson" placeholder='[{"date":"2026-08-24","venue":"別府","raceNo":7,"startTime":"18:22","timeBand":"N","candidates":[{"id":"favorite","points":1,"bets":["◎○×"]}]}]'></textarea></div>
+      <div class="actions"><button class="btn primary" id="importBtn">検索結果を取り込む</button><button class="btn" id="demoBtn">テスト1件追加</button><button class="btn danger" id="resetBtn">全データ初期化</button></div>
+    </div></section>
+    <section class="section"><div class="settingsCard"><h3 style="margin-top:0">連携インターフェース</h3><p class="note"><code>window.SMART_SELECT.receive(races)</code> または <code>postMessage({type:'SMART_FINDER_RESULTS', races:[...]})</code> で検索結果を受信できます。SMART FINDER本体側はこの形式で結果を渡すだけで連携できます。</p></div></section>
+  </main>
+</div>
+
+<nav class="tabs"><div class="tabin">
+<button class="tab active" data-page="home"><b>⌂</b>ホーム</button><button class="tab" data-page="select"><b>◆</b>SELECT</button><button class="tab" data-page="history"><b>≡</b>履歴</button><button class="tab" data-page="stats"><b>▥</b>統計</button><button class="tab" data-page="settings"><b>⚙</b>設定</button>
+</div></nav>
+
+<div class="modalWrap" id="modalWrap"><div class="modal" id="modal"></div></div><div class="toast" id="toast"></div>
+<script>
+(() => {
+const KEY='smartFinderSelect_v01';
+const candidateDefs={
+ favorite:{name:'本命型',subtitle:'主力｜初期運用',condition:'3.2.2 / 2.3.2 / 2.2.3｜3車ラインが◎○△または◎○×',bets:['◎○×'],status:'初期運用',history:'1〜7月シミュレーション採用',note:'主力1点｜◎→○→×'},
+ medium:{name:'中穴型',subtitle:'補完｜初期運用',condition:'3.2.2｜◎○△.×他.他他 完全一致',bets:['◎△○'],status:'初期運用',history:'1〜7月シミュレーション採用',note:'補完1点｜◎→△→○'},
+ bigA:{name:'大穴A',subtitle:'3.3.1 MN｜追試',condition:'◎○△順不同＋×他他順不同｜単騎=他',bets:['◎○×','○◎×','×○◎'],status:'追試',history:'48R・7的中・+10,880円・175.6%',note:'初期運用には入れずA/B別管理'},
+ bigB:{name:'大穴B',subtitle:'3.3.1 MN｜追試',condition:'◎○×順不同＋△他他順不同｜単騎=他',bets:['◎○×','○◎×','×○◎'],status:'追試',history:'31R・13的中・+1,730円・118.6%',note:'初期運用には入れずA/B別管理'}
+};
+const initial=()=>({version:3,startFunds:30000,currentFunds:30000,candidates:{favorite:true,medium:true,bigA:false,bigB:false},settingHistory:[],moneyHistory:[],races:[],capital:[{at:new Date().toISOString(),value:30000,type:'開始'}],sync:{imported:0,lastAt:null,lastPhase:'',lastError:''}});
+let state=load(), editMode=false, draftCandidates={...state.candidates}, moneyEdit=false;
+function load(){
+ try{
+  const raw=JSON.parse(localStorage.getItem(KEY)||'{}');
+  const base=initial(), merged={...base,...raw};
+  merged.candidates={...base.candidates,...(raw.candidates||{})};
+  merged.sync={...base.sync,...(raw.sync||{})};
+  merged.version=3;
+  return merged;
+ }catch(e){return initial()}
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
+function yen(n){return new Intl.NumberFormat('ja-JP').format(Math.round(Number(n)||0))+'円'}
+function pct(n){return (Number(n)||0).toFixed(1)+'%'}
+function unitFor(funds){return funds>=90000?2000:funds>=60000?1500:1000}
+function activeCandidateIds(){return Object.keys(state.candidates).filter(k=>state.candidates[k])}
+function keyOf(r){return `${r.date}|${r.venue}|${Number(r.raceNo)}`}
+function todayStr(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`}
+function racePoints(r){return (r.candidates||[]).reduce((s,c)=>s+(Number(c.points)||((c.bets||[]).length)||1),0)}
+function plannedInvestment(r){return r.investmentConfirmed!=null?r.investmentConfirmed:unitFor(state.currentFunds)*racePoints(r)}
+function settled(){return state.races.filter(r=>['的中','不的中'].includes(r.status))}
+function investedTotal(){return settled().reduce((s,r)=>s+(r.investmentConfirmed||0),0)}
+function payoutTotal(){return settled().reduce((s,r)=>s+(r.payout||0),0)}
+function profitTotal(){return state.currentFunds-state.startFunds}
+function hitCount(){return settled().filter(r=>r.status==='的中').length}
+function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1800)}
+function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+function statusBadge(s){const c=s==='的中'?'green':s==='不的中'?'red':s==='結果待ち'?'gold':'gray';return `<span class="badge ${c}">${esc(s||'投票待ち')}</span>`}
+function candTag(id){const d=candidateDefs[id];return `<span class="badge ${id.startsWith('big')?'gold':''}">${d?d.name:esc(id)}</span>`}
+function renderHome(){
+ const today=state.races.filter(r=>r.date===todayStr() && !['的中','不的中'].includes(r.status));
+ const roi=investedTotal()?payoutTotal()/investedTotal()*100:0, hit=settled().length?hitCount()/settled().length*100:0, scheduled=today.reduce((s,r)=>s+plannedInvestment(r),0);
+ document.getElementById('homeKpis').innerHTML=[['現在の運用資金',yen(state.currentFunds),`1点 ${yen(unitFor(state.currentFunds))}`],['累計利益',`${profitTotal()>=0?'+':''}${yen(profitTotal())}`,`開始 ${yen(state.startFunds)}`],['回収率',pct(roi),`投資 ${yen(investedTotal())}`],['的中率',pct(hit),`本日 ${today.length}件 / ${yen(scheduled)}`]].map((x,i)=>`<div class="kpi"><div class="lab">${x[0]}</div><div class="val ${i===1?(profitTotal()>=0?'profit':'loss'):''}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
+ document.getElementById('todayCountBadge').textContent=`${today.length}件`;
+ const sorted=[...today].sort((a,b)=>(a.startTime||'99:99').localeCompare(b.startTime||'99:99'));
+ const next=sorted[0];
+ document.getElementById('nextRace').innerHTML=next?raceHtml(next,true):'<div class="empty">本日の対象レースはまだありません。<br>SMART FINDERの検索結果を受信するとここに表示されます。</div>';
+ document.getElementById('todayRaces').innerHTML=sorted.length?sorted.map(r=>raceHtml(r,false)).join(''):'<div class="empty">対象なし</div>';
+ const vals=state.capital.map(x=>x.value), max=Math.max(...vals,1), min=Math.min(...vals,0);document.getElementById('capitalChart').innerHTML=vals.slice(-24).map(v=>`<div class="bar" style="height:${Math.max(4,((v-min)/(max-min||1))*100)}%" title="${yen(v)}"></div>`).join('');document.getElementById('capitalNote').textContent=`最低 ${yen(Math.min(...vals))} / 最高 ${yen(Math.max(...vals))} / 現在 ${yen(state.currentFunds)}`;
+}
+function raceHtml(r,isNext){const pts=racePoints(r),unit=r.investmentConfirmed!=null?r.unitConfirmed:unitFor(state.currentFunds),inv=plannedInvestment(r),tags=(r.candidates||[]).map(c=>candTag(c.id)).join('');return `<div class="${isNext?'nextCard':'raceCard'}"><div class="${isNext?'nextTop':'raceTop'}"><div><div class="raceName">${esc(r.venue)} ${esc(r.raceNo)}R</div><div class="raceMeta">${esc(r.date)}　${esc(r.startTime||'--:--')}　${esc(r.timeBand||'')}</div></div><div class="amountBig">${yen(inv)}<small>予定/確定投資</small></div></div><div class="tagRow">${tags}${statusBadge(r.status)}</div><div class="infoGrid"><div class="mini"><span>1点金額</span><b>${yen(unit)}</b></div><div class="mini"><span>点数</span><b>${pts}点</b></div><div class="mini"><span>払戻</span><b>${r.payout!=null?yen(r.payout):'—'}</b></div></div><div class="actions">${r.status==='投票待ち'?`<button class="btn primary" onclick="SMART_SELECT.markBet('${esc(r.key)}')">投票済みにする</button>`:''}${r.status==='結果待ち'?`<button class="btn save" onclick="SMART_SELECT.openResult('${esc(r.key)}')">結果を入力</button>`:''}<button class="btn" onclick="SMART_SELECT.openDetail('${esc(r.key)}')">詳細</button></div></div>`}
+function renderCandidates(){document.getElementById('candidateList').classList.toggle('editing',editMode);document.getElementById('lockState').textContent=editMode?'🔓 変更モード':'🔒 設定ロック中';document.getElementById('editCandidates').textContent=editMode?'変更をやめる':'設定を変更する';document.getElementById('savedCount').textContent=`現在保存中 ${activeCandidateIds().length}条件`;document.getElementById('candidateList').innerHTML=Object.entries(candidateDefs).map(([id,d])=>`<div class="candidate"><div class="candTop"><div><h4>${d.name} <span class="badge ${d.status==='追試'?'gold':'green'}">${d.status}</span></h4><div class="candDesc">${d.subtitle}<br>${d.condition}</div></div><div class="toggle ${draftCandidates[id]?'on':''}" data-cand="${id}"><i></i></div></div><div class="tagRow">${d.bets.map(x=>`<span class="badge gold">${x}</span>`).join('')}</div><div class="candDesc" style="margin-top:8px">過去検証：${d.history}<br>${d.note}</div></div>`).join('');document.querySelectorAll('[data-cand]').forEach(e=>e.onclick=()=>{if(!editMode)return;const id=e.dataset.cand;draftCandidates[id]=!draftCandidates[id];e.classList.toggle('on',draftCandidates[id]);document.getElementById('unsaved').style.display=JSON.stringify(draftCandidates)!==JSON.stringify(state.candidates)?'flex':'none'});
+ document.getElementById('settingHistory').innerHTML=state.settingHistory.length?state.settingHistory.slice(-3).reverse().map((h,i)=>`<div class="historyCard"><strong>${new Date(h.at).toLocaleString('ja-JP')}</strong><br>${Object.keys(h.value).filter(k=>h.value[k]).map(k=>candidateDefs[k]?.name||k).join(' / ')}<div class="actions"><button class="btn" onclick="SMART_SELECT.restoreSetting(${state.settingHistory.length-1-i})">この設定へ戻す</button></div></div>`).join(''):'<div class="empty">保存履歴はまだありません</div>';
+}
+function renderHistory(){const list=[...state.races].sort((a,b)=>`${b.date}${b.startTime||''}`.localeCompare(`${a.date}${a.startTime||''}`));document.getElementById('allHistory').innerHTML=list.length?list.map(r=>raceHtml(r,false)).join(''):'<div class="empty">履歴なし</div>'}
+function renderStats(){const s=settled(),inv=investedTotal(),pay=payoutTotal(),roi=inv?pay/inv*100:0,hit=s.length?hitCount()/s.length*100:0;document.getElementById('statsKpis').innerHTML=[['確定レース',s.length+'R',''],['的中',hitCount()+'R',pct(hit)],['累計収支',`${profitTotal()>=0?'+':''}${yen(profitTotal())}`,''],['回収率',pct(roi),`払戻 ${yen(pay)}`]].map((x,i)=>`<div class="kpi"><div class="lab">${x[0]}</div><div class="val ${i===2?(profitTotal()>=0?'profit':'loss'):''}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
+ document.getElementById('candidateStats').innerHTML=Object.keys(candidateDefs).map(id=>{const races=s.filter(r=>(r.candidates||[]).some(c=>c.id===id));let iv=0,pv=0,h=0;races.forEach(r=>{const c=(r.candidates||[]).find(x=>x.id===id);const totalPts=racePoints(r);const cp=Number(c?.points)||c?.bets?.length||1;const share=totalPts?cp/totalPts:0;iv+=(r.investmentConfirmed||0)*share;pv+=(r.payout||0)*share;if(r.status==='的中')h++});return `<div class="historyCard"><strong>${candidateDefs[id].name}</strong>　${races.length}R / 的中 ${h}R<br>参考投資 ${yen(iv)}　参考払戻 ${yen(pv)}　参考回収率 ${pct(iv?pv/iv*100:0)}</div>`}).join('')}
+function renderSettings(){document.getElementById('startFunds').value=String(state.startFunds);document.getElementById('currentFunds').value=state.currentFunds;document.getElementById('startFunds').disabled=!moneyEdit;document.getElementById('moneyLockState').textContent=moneyEdit?'🔓 資金設定変更中':'🔒 資金設定ロック中';document.getElementById('saveMoney').style.display=moneyEdit?'block':'none'}
+function renderAll(){renderHome();renderCandidates();renderHistory();renderStats();renderSettings()}
+function receive(races,options={}){if(!Array.isArray(races))races=[races];let added=0,merged=0,skipped=0;for(const raw of races){if(!raw||!raw.date||!raw.venue||raw.raceNo==null)continue;const key=keyOf(raw);let r=state.races.find(x=>x.key===key);const incoming=(raw.candidates||[]).filter(c=>state.candidates[c.id]!==false).map(c=>({id:c.id,points:Number(c.points)||((c.bets||[]).length)||1,bets:c.bets||candidateDefs[c.id]?.bets||[]}));if(!incoming.length){skipped++;continue}if(!r){r={key,date:raw.date,venue:raw.venue,raceNo:Number(raw.raceNo),startTime:raw.startTime||'',timeBand:raw.timeBand||'',candidates:[],status:'投票待ち',createdAt:new Date().toISOString(),source:raw.source||'',line:raw.line||'',threeOrder:raw.threeOrder||'',predictionUrl:raw.predictionUrl||''};state.races.push(r);added++}else merged++;for(const c of incoming){const ex=r.candidates.find(x=>x.id===c.id);if(!ex)r.candidates.push(c);else{ex.bets=[...new Set([...(ex.bets||[]),...(c.bets||[])])];ex.points=Math.max(ex.points||0,c.points||0)}}r.startTime=raw.startTime||r.startTime;r.timeBand=raw.timeBand||r.timeBand;r.line=raw.line||r.line||'';r.threeOrder=raw.threeOrder||r.threeOrder||'';r.predictionUrl=raw.predictionUrl||r.predictionUrl||'';r.source=raw.source||r.source||''}if(added||merged){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}if(!options.silent)toast(`取込完了：新規 ${added} / 統合 ${merged}${skipped?` / 除外 ${skipped}`:''}`);return {added,merged,skipped}}
+function markBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;const unit=unitFor(state.currentFunds),inv=unit*racePoints(r);if(state.currentFunds<inv){toast('現在資金が予定投資額を下回っています');return}showModal(`<h3>投票済みにしますか？</h3><p class="note">${esc(r.venue)} ${r.raceNo}R<br>1点 ${yen(unit)} × ${racePoints(r)}点 = <b>${yen(inv)}</b><br>確定すると現在資金から投資額を差し引きます。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn primary" onclick="SMART_SELECT.confirmBet('${esc(key)}')">確定</button></div>`)}
+function confirmBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;const unit=unitFor(state.currentFunds),inv=unit*racePoints(r);r.unitConfirmed=unit;r.investmentConfirmed=inv;r.status='結果待ち';r.betAt=new Date().toISOString();state.currentFunds-=inv;state.capital.push({at:new Date().toISOString(),value:state.currentFunds,type:`投資 ${r.venue}${r.raceNo}R`});save();closeModal();toast('投票額を資金へ反映しました')}
+function openResult(key){const r=state.races.find(x=>x.key===key);if(!r)return;showModal(`<h3>結果を反映</h3><p class="note">${esc(r.venue)} ${r.raceNo}R　投資 ${yen(r.investmentConfirmed||0)}</p><div class="field"><label>実際の払戻額</label><input id="payoutInput" type="number" min="0" step="10" value="0"></div><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" onclick="SMART_SELECT.confirmResult('${esc(key)}')">払戻を確定</button></div>`)}
+function confirmResult(key){const r=state.races.find(x=>x.key===key),input=document.getElementById('payoutInput');if(!r||!input)return;const p=Math.max(0,Number(input.value)||0);r.payout=p;r.status=p>0?'的中':'不的中';r.settledAt=new Date().toISOString();state.currentFunds+=p;state.capital.push({at:new Date().toISOString(),value:state.currentFunds,type:`払戻 ${r.venue}${r.raceNo}R`});save();closeModal();toast('結果と資金を更新しました')}
+function openDetail(key){const r=state.races.find(x=>x.key===key);if(!r)return;showModal(`<h3>${esc(r.venue)} ${r.raceNo}R 詳細</h3><div class="raceMeta">${r.date} ${esc(r.startTime||'--:--')} ${esc(r.timeBand||'')}</div>${r.line?`<p class="note">ライン：${esc(r.line)}${r.threeOrder?`<br>3車ライン印：${esc(r.threeOrder)}`:''}</p>`:''}${(r.candidates||[]).map(c=>`<div class="settingsCard" style="margin-top:8px"><b>${candidateDefs[c.id]?.name||esc(c.id)}</b><div class="tagRow">${(c.bets||[]).map(b=>`<span class="badge gold">${esc(b)}</span>`).join('')}</div><p class="note">${candidateDefs[c.id]?.condition||''}</p></div>`).join('')}${r.predictionUrl?`<div class="actions"><a class="btn primary" href="${esc(r.predictionUrl)}" target="_blank" rel="noopener">WINTICKETで見る</a></div>`:''}<div class="modalBtns"><button class="btn primary" onclick="SMART_SELECT.closeModal()">閉じる</button></div>`)}
+function showModal(html){document.getElementById('modal').innerHTML=html;document.getElementById('modalWrap').classList.add('show')}function closeModal(){document.getElementById('modalWrap').classList.remove('show')}
+function restoreSetting(index){const h=state.settingHistory[index];if(!h)return;showModal(`<h3>前の設定へ戻しますか？</h3><p class="note">${Object.keys(h.value).filter(k=>h.value[k]).map(k=>candidateDefs[k]?.name||k).join(' / ')}</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" onclick="SMART_SELECT.confirmRestore(${index})">復元</button></div>`)}function confirmRestore(index){const h=state.settingHistory[index];if(!h)return;state.settingHistory.push({at:new Date().toISOString(),value:{...state.candidates},reason:'復元前'});state.settingHistory=state.settingHistory.slice(-3);state.candidates={...h.value};draftCandidates={...state.candidates};save();closeModal();toast('設定を復元しました')}
+
+function sfCandidateId(m){
+ const raw=String(m.strategy_id||m.strategy||m.condition_id||m.condition_name||m.candidate||'').toLowerCase();
+ if(raw.includes('biga')||raw.includes('big_a')||raw.includes('大穴a'))return 'bigA';
+ if(raw.includes('bigb')||raw.includes('big_b')||raw.includes('大穴b'))return 'bigB';
+ if(raw.includes('mid')||raw.includes('medium')||raw.includes('中穴')||raw.includes('補完'))return 'medium';
+ return 'favorite';
+}
+function normalizeSmartFinderMatch(m){
+ const raceNo=Number(m.raceNo??m.race_no??m.race??m.r??0);
+ const venue=String(m.venue??m.place??m.venue_name??'').trim();
+ if(!venue||!raceNo)return null;
+ const id=sfCandidateId(m);
+ const bets=Array.isArray(m.bets)?m.bets:(Array.isArray(m.bet)?m.bet:candidateDefs[id]?.bets||[]);
+ const date=String(m.date||m.race_date||todayStr()).slice(0,10);
+ return {date,venue,raceNo,startTime:String(m.startTime??m.start_time??m.time??'').trim(),timeBand:String(m.timeBand??m.session??m.day??'').trim(),candidates:[{id,points:Number(m.points)||bets.length||1,bets}],source:'smart_finder',line:String(m.line||''),threeOrder:String(m.three_order||m.threeOrder||''),predictionUrl:String(m.event_url||m.winticket_url||m.prediction_url||m.url||'')};
+}
+let sfBusy=false;
+async function sfPost(url,body={}){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});let d={};try{d=await r.json()}catch(e){}return {http:r.status,...d}}
+function setSfUi(st,detail){
+ const link=document.getElementById('sfLinkState'),start=document.getElementById('sfStartBtn'),retry=document.getElementById('sfRetryBtn'),stop=document.getElementById('sfStopBtn'),d=document.getElementById('sfSyncDetail'),count=document.getElementById('sfSyncCount');
+ if(link){const online=st&&st.agent_online!==false;link.textContent=online?'接続中':'PC未接続';link.className='linkState '+(online?'online':'offline')}
+ if(start){start.disabled=!!st?.running||st?.agent_online===false;start.textContent=st?.running?'検索中':'SMART FINDER検索開始'}
+ if(retry)retry.disabled=!!st?.running||st?.agent_online===false;
+ if(stop)stop.style.display=st?.running?'inline-block':'none';
+ if(d)d.textContent=detail||'検索結果を待っています。';
+ if(count)count.textContent=`${state.sync?.imported||0}件取込`;
+}
+async function syncFromSmartFinder(){
+ try{
+  const res=await fetch('/api/status',{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);const st=await res.json();
+  const matches=(st.matches||[]).map(normalizeSmartFinderMatch).filter(Boolean);
+  const rr=receive(matches,{silent:true});
+  state.sync=state.sync||{};state.sync.imported=(state.sync.imported||0)+rr.added;state.sync.lastAt=new Date().toISOString();state.sync.lastPhase=st.phase||'';state.sync.lastError='';localStorage.setItem(KEY,JSON.stringify(state));
+  const phase=st.running?'検索中':st.phase==='done'?'検索完了':st.phase==='error'?'エラー':'待機';
+  setSfUi(st,`${phase}｜検出 ${matches.length}件｜新規 ${rr.added}件${rr.skipped?`｜SELECT除外 ${rr.skipped}件`:''}`);
+ }catch(e){state.sync=state.sync||{};state.sync.lastError=String(e);const link=document.getElementById('sfLinkState');if(link){link.textContent='未接続';link.className='linkState offline'}const d=document.getElementById('sfSyncDetail');if(d)d.textContent='SMART FINDERと同じRender上で開くと自動取込します。';}
+}
+async function startSmartFinder(){
+ if(sfBusy)return;sfBusy=true;
+ try{
+  const st=await fetch('/api/status',{cache:'no-store'}).then(r=>r.json());if(st.running){toast('すでに検索中です');return}
+  let d=await sfPost('/api/control/load-board',{});if(!d.ok){toast('開催場取得を開始できません');return}
+  const deadline=Date.now()+180000;
+  while(Date.now()<deadline){await new Promise(r=>setTimeout(r,1500));const s=await fetch('/api/status',{cache:'no-store'}).then(r=>r.json());if(!s.running&&(s.venues_info||[]).length){d=await sfPost('/api/control/auto-search',{});if(!d.ok)toast('F2自動検索を開始できません');return}if(s.phase==='error'){toast('開催場取得でエラー');return}}
+  toast('開催場取得がタイムアウトしました');
+ }catch(e){toast('SMART FINDERに接続できません')}finally{sfBusy=false;syncFromSmartFinder()}
+}
+async function retrySmartFinder(){try{const st=await fetch('/api/status',{cache:'no-store'}).then(r=>r.json());if(st.running){toast('すでに検索中です');return}const d=await sfPost('/api/control/auto-search',{});if(!d.ok)toast('再検索できません')}catch(e){toast('SMART FINDERに接続できません')}finally{syncFromSmartFinder()}}
+async function stopSmartFinder(){try{await sfPost('/api/control/stop',{})}catch(e){}finally{syncFromSmartFinder()}}
+window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder};
+window.addEventListener('message',e=>{if(e.data?.type==='SMART_FINDER_RESULTS'&&e.data.races)receive(e.data.races)});
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab,.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active');renderAll()});
+document.getElementById('editCandidates').onclick=()=>{editMode=!editMode;draftCandidates={...state.candidates};document.getElementById('unsaved').style.display='none';renderCandidates()};
+document.getElementById('saveCandidates').onclick=()=>showModal(`<h3>この内容で保存しますか？</h3><p class="note">使用：${Object.keys(draftCandidates).filter(k=>draftCandidates[k]).map(k=>candidateDefs[k].name).join(' / ')||'なし'}</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" id="doCandidateSave">保存する</button></div>`),document.addEventListener('click',e=>{if(e.target?.id==='doCandidateSave'){state.settingHistory.push({at:new Date().toISOString(),value:{...state.candidates}});state.settingHistory=state.settingHistory.slice(-3);state.candidates={...draftCandidates};editMode=false;save();closeModal();document.getElementById('unsaved').style.display='none';toast('SELECT設定を保存しました')}});
+document.getElementById('editMoney').onclick=()=>{moneyEdit=!moneyEdit;renderSettings()};document.getElementById('saveMoney').onclick=()=>{const old=state.startFunds,n=Number(document.getElementById('startFunds').value)||old;if(settled().length||state.races.some(r=>r.status==='結果待ち')){toast('運用開始後は開始資金を変更しません');moneyEdit=false;renderSettings();return}state.moneyHistory.push({at:new Date().toISOString(),old,new:n});state.startFunds=n;state.currentFunds=n;state.capital=[{at:new Date().toISOString(),value:n,type:'開始資金変更'}];moneyEdit=false;save();toast('資金設定を保存しました')};
+document.getElementById('importBtn').onclick=()=>{try{const j=JSON.parse(document.getElementById('importJson').value);receive(j)}catch(e){toast('JSON形式を確認してください')}};
+document.getElementById('demoBtn').onclick=()=>{const d=todayStr();receive([{date:d,venue:'別府',raceNo:7,startTime:'18:22',timeBand:'N',candidates:[{id:'favorite',points:1,bets:['◎○×']}]}])};
+document.getElementById('resetBtn').onclick=()=>showModal(`<h3>全データを初期化しますか？</h3><p class="note">SELECT設定・レース履歴・資金履歴をすべて消し、30,000円開始へ戻します。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn danger" id="doReset">初期化</button></div>`);document.addEventListener('click',e=>{if(e.target?.id==='doReset'){state=initial();draftCandidates={...state.candidates};localStorage.removeItem(KEY);save();closeModal();toast('初期化しました')}});
+document.getElementById('modalWrap').addEventListener('click',e=>{if(e.target.id==='modalWrap')closeModal()});
+const sfStart=document.getElementById('sfStartBtn'),sfRetry=document.getElementById('sfRetryBtn'),sfStop=document.getElementById('sfStopBtn');
+if(sfStart)sfStart.onclick=startSmartFinder;if(sfRetry)sfRetry.onclick=retrySmartFinder;if(sfStop)sfStop.onclick=stopSmartFinder;
+renderAll();
+syncFromSmartFinder();
+setInterval(syncFromSmartFinder,1500);
+})();
+</script>
+</body>
+</html>
