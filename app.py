@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, send_from_directory
 from pathlib import Path
 from threading import Lock
-import os, time, uuid
+import os, time, uuid, json, re
 
 app = Flask(__name__)
 BASE = Path(__file__).resolve().parent
@@ -49,11 +49,71 @@ def agent_ok():
         return False
     return request.headers.get("X-Agent-Token", "") == AGENT_TOKEN
 
+def _derive_ai_unpublished(s):
+    """PC agentの既存状態からAI予想未公開件数を後方互換で算出する。"""
+    counters = s.get("counters") if isinstance(s.get("counters"), dict) else {}
+
+    direct_keys = (
+        "ai_unpublished", "ai_unpublished_count", "unpublished_ai",
+        "prediction_unpublished", "prediction_pending",
+        "ai_pending", "pending_ai", "unpublished"
+    )
+    for key in direct_keys:
+        try:
+            val = int(counters.get(key))
+            if val >= 0:
+                return val
+        except (TypeError, ValueError):
+            pass
+
+    for key, value in counters.items():
+        nk = str(key).lower().replace("-", "_").replace(" ", "_")
+        if (("ai" in nk or "prediction" in nk or "予想" in str(key))
+                and ("unpublished" in nk or "pending" in nk or "未公開" in str(key))):
+            try:
+                val = int(value)
+                if val >= 0:
+                    return val
+            except (TypeError, ValueError):
+                pass
+
+    marker = re.compile(
+        r"AI予想未公開|AI未公開|予想未公開|"
+        r"ai[_ -]?unpublished|prediction[_ -]?(?:unpublished|pending)|"
+        r"not[_ -]?published",
+        re.I
+    )
+
+    count = 0
+    for bucket in ("skipped", "errors"):
+        items = s.get(bucket) if isinstance(s.get(bucket), list) else []
+        for item in items:
+            try:
+                blob = json.dumps(item, ensure_ascii=False)
+            except Exception:
+                blob = str(item)
+            if marker.search(blob):
+                count += 1
+    if count:
+        return count
+
+    summary = f'{s.get("current","")} {s.get("detail","")}'
+    m = re.search(r"(?:AI予想未公開|AI未公開|予想未公開)\s*[:：]?\s*(\d+)\s*件?", summary, re.I)
+    if m:
+        return int(m.group(1))
+    return 0
+
 def public_state():
     with lock:
         s = dict(state)
         s["agent_online"] = bool(s["agent_last_seen"] and now() - s["agent_last_seen"] < 12)
         s.pop("pending_command", None)
+
+        ai_unpublished = _derive_ai_unpublished(s)
+        s["ai_unpublished_count"] = ai_unpublished
+        counters = dict(s.get("counters") or {})
+        counters["ai_unpublished_count"] = ai_unpublished
+        s["counters"] = counters
         return s
 
 def enqueue(kind, payload=None):

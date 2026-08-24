@@ -324,14 +324,31 @@ function setSfUi(st,detail){
  if(d)d.textContent=detail||'検索結果を待っています。';
  if(count)count.textContent=`${state.sync?.imported||0}件取込`;
 }
+function aiUnpublishedCount(st){
+ const top=Number(st?.ai_unpublished_count);
+ if(Number.isFinite(top)&&top>=0)return top;
+ const c=st?.counters||{};
+ const direct=[
+  c.ai_unpublished,c.ai_unpublished_count,c.unpublished_ai,c.unpublished,
+  c.ai_pending,c.pending_ai,c.prediction_unpublished,c.prediction_pending
+ ].map(Number).find(n=>Number.isFinite(n)&&n>=0);
+ if(Number.isFinite(direct))return direct;
+ return (st?.skipped||[]).filter(x=>{
+  const s=JSON.stringify(x||'');
+  return /AI予想未公開|AI未公開|予想未公開|ai[_ -]?unpublished|prediction[_ -]?(?:unpublished|pending)|not[_ -]?published/i.test(s);
+ }).length;
+}
 async function syncFromSmartFinder(){
  try{
   const res=await fetch('/api/status',{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);const st=await res.json();
   const matches=(st.matches||[]).map(normalizeSmartFinderMatch).filter(Boolean);
   const rr=receive(matches,{silent:true});
-  state.sync=state.sync||{};state.sync.imported=(state.sync.imported||0)+rr.added;state.sync.lastAt=new Date().toISOString();state.sync.lastPhase=st.phase||'';state.sync.lastError='';localStorage.setItem(KEY,JSON.stringify(state));
+  const aiUnpublished=aiUnpublishedCount(st);
+  state.sync=state.sync||{};state.sync.imported=(state.sync.imported||0)+rr.added;state.sync.aiUnpublished=aiUnpublished;state.sync.lastAt=new Date().toISOString();state.sync.lastPhase=st.phase||'';state.sync.lastError='';localStorage.setItem(KEY,JSON.stringify(state));
   const phase=st.running?'検索中':st.phase==='done'?'検索完了':st.phase==='error'?'エラー':'待機';
-  setSfUi(st,`${phase}｜検出 ${matches.length}件｜新規 ${rr.added}件${rr.skipped?`｜SELECT除外 ${rr.skipped}件`:''}`);
+  setSfUi(st,`${phase}｜検出 ${matches.length}件｜新規 ${rr.added}件｜AI未公開 ${aiUnpublished}件${rr.skipped?`｜SELECT除外 ${rr.skipped}件`:''}`);
+  const count=document.getElementById('sfSyncCount');
+  if(count)count.textContent=`${state.sync?.imported||0}件取込 / AI未公開 ${aiUnpublished}件`;
  }catch(e){state.sync=state.sync||{};state.sync.lastError=String(e);const link=document.getElementById('sfLinkState');if(link){link.textContent='未接続';link.className='linkState offline'}const d=document.getElementById('sfSyncDetail');if(d)d.textContent='SMART FINDERと同じRender上で開くと自動取込します。';}
 }
 async function startSmartFinder(){
