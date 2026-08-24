@@ -135,6 +135,10 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#d8f5ff}
 .linkState.offline{color:#ff9eb0;border-color:rgba(255,117,141,.35);background:rgba(42,10,20,.7)}
 @media(max-width:920px){.heroGrid{grid-template-columns:1fr;}.trophyHalo{width:150px;height:150px;margin:auto}.statusCard{order:3}.heroMainTitle{font-size:22px}}
 @media(max-width:680px){.app{padding-top:12px}.kpis{grid-template-columns:repeat(2,1fr)}.pageHero h2{font-size:17px}.rule{font-size:9px}.infoGrid{grid-template-columns:repeat(3,1fr)}.formRow{grid-template-columns:1fr}.heroMainTitle{font-size:20px}.heroSub{font-size:11px}.logoBox{width:52px;height:52px;font-size:23px}.commandHero{padding:16px}.titleWrap{align-items:flex-start}.statusRow b{font-size:13px}}
+
+.fixBadge{display:inline-flex;align-items:center;gap:6px;margin-left:10px;padding:5px 9px;border:1px solid rgba(88,255,210,.45);border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.04em;color:#8fffe2;background:rgba(13,92,74,.25);vertical-align:middle}
+.fixBadge::before{content:"✓";font-weight:1000}
+
 </style>
 </head>
 <body>
@@ -176,7 +180,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#d8f5ff}
       <div class="pageHeroTitle"><div><div class="eyebrow">SMART FINDER / SELECT / CAPITAL</div><h2>資金サマリー</h2></div><div class="rule">開始 30,000円<br>30,000〜59,999 → 1,000円/点<br>60,000〜89,999 → 1,500円/点<br>90,000〜 → 2,000円/点</div></div>
       <div class="kpis" id="homeKpis"></div>
     </section>
-    <section class="section"><div class="sectionHead"><h3><span>SMART FINDER LINK</span> 検索結果連携</h3><span id="sfLinkState" class="linkState">確認中</span></div>
+    <section class="section"><div class="sectionHead"><h3><span>SMART FINDER LINK</span> 検索結果連携<span class="fixBadge">AI未公開表示 修正済</span></h3><span id="sfLinkState" class="linkState">確認中</span></div>
       <div class="syncPanel">
         <div class="syncTop"><div><div class="syncTitle">SMART FINDER 自動取込</div><div id="sfSyncDetail" class="syncDetail">同じRender上のSMART FINDERを確認しています。</div></div><span id="sfSyncCount" class="badge">0件取込</span></div>
         <div class="syncActions"><button class="btn primary" id="sfStartBtn">SMART FINDER検索開始</button><button class="btn" id="sfRetryBtn">今日を再検索</button><button class="btn danger" id="sfStopBtn" style="display:none">検索停止</button></div>
@@ -325,17 +329,18 @@ function setSfUi(st,detail){
  if(count)count.textContent=`${state.sync?.imported||0}件取込`;
 }
 function aiUnpublishedCount(st){
+ if(Array.isArray(st?.unpublished))return st.unpublished.length;
  const top=Number(st?.ai_unpublished_count);
  if(Number.isFinite(top)&&top>=0)return top;
  const c=st?.counters||{};
  const direct=[
-  c.ai_unpublished,c.ai_unpublished_count,c.unpublished_ai,c.unpublished,
-  c.ai_pending,c.pending_ai,c.prediction_unpublished,c.prediction_pending
+  c.ai_unpublished_count,c.ai_unpublished,c.unpublished_count,c.unpublished_ai,
+  c.prediction_unpublished,c.prediction_pending,c.ai_pending,c.pending_ai,c.unpublished
  ].map(Number).find(n=>Number.isFinite(n)&&n>=0);
  if(Number.isFinite(direct))return direct;
  return (st?.skipped||[]).filter(x=>{
   const s=JSON.stringify(x||'');
-  return /AI予想未公開|AI未公開|予想未公開|ai[_ -]?unpublished|prediction[_ -]?(?:unpublished|pending)|not[_ -]?published/i.test(s);
+  return /AI予想未公開|AI未公開|予想未公開|予想中|ライン未公開|並び判定待ち|ai[_ -]?unpublished|prediction[_ -]?(?:unpublished|pending)|not[_ -]?published/i.test(s);
  }).length;
 }
 async function syncFromSmartFinder(){

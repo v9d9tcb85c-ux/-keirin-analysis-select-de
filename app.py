@@ -19,6 +19,7 @@ state = {
     "venues_info": [],
     "matches": [],
     "skipped": [],
+    "unpublished": [],
     "errors": [],
     "counters": {},
     "pending_command": None,
@@ -50,69 +51,50 @@ def agent_ok():
     return request.headers.get("X-Agent-Token", "") == AGENT_TOKEN
 
 def _derive_ai_unpublished(s):
-    """PC agentの既存状態からAI予想未公開件数を後方互換で算出する。"""
-    counters = s.get("counters") if isinstance(s.get("counters"), dict) else {}
+    """PC側から届く未公開情報を、形式差に強く数える。"""
+    unpublished = s.get("unpublished")
+    if isinstance(unpublished, list):
+        return len(unpublished)
 
-    direct_keys = (
-        "ai_unpublished", "ai_unpublished_count", "unpublished_ai",
-        "prediction_unpublished", "prediction_pending",
+    counters = s.get("counters") if isinstance(s.get("counters"), dict) else {}
+    for key in (
+        "ai_unpublished_count", "ai_unpublished", "unpublished_count",
+        "unpublished_ai", "prediction_unpublished", "prediction_pending",
         "ai_pending", "pending_ai", "unpublished"
-    )
-    for key in direct_keys:
+    ):
         try:
-            val = int(counters.get(key))
-            if val >= 0:
-                return val
+            v = int(counters.get(key))
+            if v >= 0:
+                return v
         except (TypeError, ValueError):
             pass
 
-    for key, value in counters.items():
-        nk = str(key).lower().replace("-", "_").replace(" ", "_")
-        if (("ai" in nk or "prediction" in nk or "予想" in str(key))
-                and ("unpublished" in nk or "pending" in nk or "未公開" in str(key))):
-            try:
-                val = int(value)
-                if val >= 0:
-                    return val
-            except (TypeError, ValueError):
-                pass
-
     marker = re.compile(
-        r"AI予想未公開|AI未公開|予想未公開|"
-        r"ai[_ -]?unpublished|prediction[_ -]?(?:unpublished|pending)|"
-        r"not[_ -]?published",
+        r"AI予想未公開|AI未公開|予想未公開|予想中|ライン未公開|並び判定待ち|"
+        r"ai[_ -]?unpublished|prediction[_ -]?(?:unpublished|pending)|not[_ -]?published",
         re.I
     )
-
     count = 0
     for bucket in ("skipped", "errors"):
-        items = s.get(bucket) if isinstance(s.get(bucket), list) else []
-        for item in items:
+        rows = s.get(bucket) if isinstance(s.get(bucket), list) else []
+        for row in rows:
             try:
-                blob = json.dumps(item, ensure_ascii=False)
+                blob = json.dumps(row, ensure_ascii=False)
             except Exception:
-                blob = str(item)
+                blob = str(row)
             if marker.search(blob):
                 count += 1
-    if count:
-        return count
-
-    summary = f'{s.get("current","")} {s.get("detail","")}'
-    m = re.search(r"(?:AI予想未公開|AI未公開|予想未公開)\s*[:：]?\s*(\d+)\s*件?", summary, re.I)
-    if m:
-        return int(m.group(1))
-    return 0
+    return count
 
 def public_state():
     with lock:
         s = dict(state)
         s["agent_online"] = bool(s["agent_last_seen"] and now() - s["agent_last_seen"] < 12)
         s.pop("pending_command", None)
-
-        ai_unpublished = _derive_ai_unpublished(s)
-        s["ai_unpublished_count"] = ai_unpublished
+        n = _derive_ai_unpublished(s)
+        s["ai_unpublished_count"] = n
         counters = dict(s.get("counters") or {})
-        counters["ai_unpublished_count"] = ai_unpublished
+        counters["ai_unpublished_count"] = n
         s["counters"] = counters
         return s
 
@@ -166,6 +148,7 @@ def load_board():
             "venues_info": [],
             "matches": [],
             "skipped": [],
+            "unpublished": [],
             "errors": [],
             "counters": {},
             "stop_requested": False,
@@ -201,6 +184,7 @@ def auto_search():
             "detail": f"今日のF2 {len(selected)}場を自動選択してPC側で検索します。",
             "matches": [],
             "skipped": [],
+            "unpublished": [],
             "errors": [],
             "counters": {},
             "stop_requested": False,
@@ -242,7 +226,7 @@ def search():
             "retry_preserve": preserve_display,
         }
         if not preserve_display:
-            next_state.update({"matches": [], "skipped": [], "errors": [], "counters": {}})
+            next_state.update({"matches": [], "skipped": [], "unpublished": [], "errors": [], "counters": {}})
         state.update(next_state)
     return jsonify(ok=True, command_id=cid)
 
@@ -287,6 +271,7 @@ def reset():
             "detail": "検索結果をリセットしました。F2チェックはそのまま残しています。" if has_venues else "検索状態をリセットしました。",
             "matches": [],
             "skipped": [],
+            "unpublished": [],
             "errors": [],
             "counters": {},
             "pending_command": None,
@@ -313,6 +298,7 @@ def hard_reset():
             "venues_info": [],
             "matches": [],
             "skipped": [],
+            "unpublished": [],
             "errors": [],
             "counters": {},
             "pending_command": None,
@@ -349,10 +335,10 @@ def agent_progress():
         if preserve and fresh_started:
             state["retry_preserve"] = False
             preserve = False
-        for k in ("phase","running","current","detail","venues_info","matches","skipped","errors","counters"):
+        for k in ("phase","running","current","detail","venues_info","matches","skipped","unpublished","errors","counters"):
             if k not in data:
                 continue
-            if preserve and k in ("matches","skipped","errors","counters"):
+            if preserve and k in ("matches","skipped","unpublished","errors","counters"):
                 continue
             state[k] = data[k]
         state["updated_at"] = now()
@@ -365,7 +351,7 @@ def agent_finish():
     data = request.get_json(silent=True) or {}
     with lock:
         state["agent_last_seen"] = now()
-        for k in ("phase","current","detail","venues_info","matches","skipped","errors","counters"):
+        for k in ("phase","current","detail","venues_info","matches","skipped","unpublished","errors","counters"):
             if k in data:
                 state[k] = data[k]
         state["running"] = False
