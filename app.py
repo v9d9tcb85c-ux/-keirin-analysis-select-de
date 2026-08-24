@@ -1,4 +1,4 @@
-﻿from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 from pathlib import Path
 from threading import Lock
 import os, time, uuid
@@ -9,7 +9,6 @@ lock = Lock()
 
 AGENT_TOKEN = os.environ.get("AGENT_TOKEN", "").strip()
 CONTROL_KEY = os.environ.get("CONTROL_KEY", "").strip()
-
 state = {
     "agent_online": False,
     "agent_last_seen": 0.0,
@@ -30,8 +29,6 @@ state = {
     "last_control_at": 0.0,
     "retry_preserve": False,
 }
-
-
 
 def now():
     return time.time()
@@ -79,6 +76,10 @@ def enqueue(kind, payload=None):
 def index():
     return send_from_directory(BASE, "index.html")
 
+@app.get("/select.html")
+def select_page():
+    return send_from_directory(BASE, "select.html")
+
 @app.get("/api/status")
 def status():
     return jsonify(public_state())
@@ -122,14 +123,12 @@ def auto_search():
         return jsonify(ok=False, reason="pc_offline"), 409
     if s["running"]:
         return jsonify(ok=False, reason="running"), 409
-
     selected = [
         x.get("slug") for x in s.get("venues_info", [])
         if x.get("grade") == "F2" and x.get("slug")
     ]
     if not selected:
         return jsonify(ok=False, reason="no_f2_venues"), 400
-
     cid = enqueue("search_selected", {"selected": selected})
     if not cid:
         return jsonify(ok=False, reason="command_pending"), 409
@@ -182,8 +181,6 @@ def search():
             "stop_requested": False,
             "retry_preserve": preserve_display,
         }
-        # 通常検索は新規なのでリセット。
-        # 再検索は「押した瞬間」に前回表示を消さない。
         if not preserve_display:
             next_state.update({"matches": [], "skipped": [], "errors": [], "counters": {}})
         state.update(next_state)
@@ -193,17 +190,12 @@ def search():
 def stop():
     if not control_ok():
         return jsonify(ok=False, reason="unauthorized"), 401
-
     with lock:
-        # すでに止まっているなら、stopコマンドを増やさずそのまま成功扱い。
         if not state["running"]:
             state["stop_requested"] = False
             return jsonify(ok=True, already_stopped=True)
-
-        # 1回stopを送った後は、同じstopを何度押しても二重送信しない。
         if state.get("stop_requested"):
             return jsonify(ok=True, already_requested=True)
-
         cid = uuid.uuid4().hex
         state["pending_command"] = {
             "id": cid,
@@ -217,7 +209,6 @@ def stop():
         state["current"] = "停止処理中"
         state["detail"] = "現在のレース処理が安全に止まるのを待っています。"
         state["updated_at"] = now()
-
     return jsonify(ok=True, command_id=cid)
 
 @app.post("/api/control/reset")
@@ -227,11 +218,9 @@ def reset():
     with lock:
         if state["running"]:
             return jsonify(ok=False, reason="running"), 409
-
         has_venues = bool(state.get("venues_info"))
         mark_control("終了")
         state.update({
-            # 終了後も開催場一覧は保持し、同じチェックで再検索できるようにする。
             "phase": "select" if has_venues else "idle",
             "running": False,
             "current": "終了しました",
@@ -248,16 +237,13 @@ def reset():
         })
     return jsonify(ok=True)
 
-
 @app.post("/api/control/hard-reset")
 def hard_reset():
     if not control_ok():
         return jsonify(ok=False, reason="unauthorized"), 401
-
     with lock:
         if state["running"]:
             return jsonify(ok=False, reason="running"), 409
-
         mark_control("完全リセット")
         state.update({
             "phase": "idle",
@@ -295,26 +281,20 @@ def agent_progress():
     data = request.get_json(silent=True) or {}
     with lock:
         state["agent_last_seen"] = now()
-
         preserve = bool(state.get("retry_preserve"))
         incoming_counters = data.get("counters") if isinstance(data.get("counters"), dict) else {}
         fresh_checked = int(incoming_counters.get("checked_races") or 0)
         fresh_matches = data.get("matches") if isinstance(data.get("matches"), list) else []
-
-        # 再検索開始直後（まだ0R確認）は、前回の件数・該当表示を消さない。
-        # 新しい検索で1R以上確認した瞬間から新しい進捗へ切り替える。
         fresh_started = fresh_checked > 0 or bool(fresh_matches)
         if preserve and fresh_started:
             state["retry_preserve"] = False
             preserve = False
-
         for k in ("phase","running","current","detail","venues_info","matches","skipped","errors","counters"):
             if k not in data:
                 continue
             if preserve and k in ("matches","skipped","errors","counters"):
                 continue
             state[k] = data[k]
-
         state["updated_at"] = now()
     return jsonify(ok=True)
 
@@ -331,7 +311,6 @@ def agent_finish():
         state["running"] = False
         state["stop_requested"] = False
         state["retry_preserve"] = False
-        # 停止完了後に古いstop命令が残っていた場合は破棄する。
         if state.get("pending_command") and state["pending_command"].get("kind") == "stop":
             state["pending_command"] = None
         state["updated_at"] = now()
