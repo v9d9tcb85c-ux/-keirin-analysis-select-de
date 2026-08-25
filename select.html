@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / 実運用UI v2.0 ボタン反応・見切れ修正</title>
+<title>WINTICKET SMART FINDER SELECT / 実運用UI v2.2 現行3条件版</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -704,8 +704,8 @@ button,input,select,textarea,.tab{position:relative;z-index:3}
 </style>
 </head>
 <body>
-<!-- BUILD: v2.1 LIVE TRIAL / MULTI-DAY OPERATION -->
-<div class="app" data-build="v2.1-live-trial">
+<!-- BUILD: v2.2 CURRENT THREE SELECT RULES / MULTI-DAY OPERATION -->
+<div class="app" data-build="v2.2-three-rules">
   <div class="testBanner" id="testBanner"><div>🧪 SAFE TEST MODE<small>本番の購入履歴・資金・検索結果には保存しません。</small></div><button class="btn" id="exitTestTop">本番へ戻る</button></div>
   <header class="commandHero">
     <div class="heroGrid">
@@ -732,7 +732,7 @@ button,input,select,textarea,.tab{position:relative;z-index:3}
         <div class="statusCard">
           <div class="statusTitle">Today’s Target / AI Status</div>
           <div class="statusRow"><div><b>F2 M / D / N / MN</b><span>SMART FINDERと同系統の表示役割</span></div><span class="badge">TARGET</span></div>
-          <div class="statusRow"><div><b>初期運用：主力＋補完</b><span>大穴A/Bは追試枠として別管理</span></div><span class="badge gold">SELECT 2</span></div>
+          <div class="statusRow"><div><b>現行運用：①本命＋②補填＋③中穴</b><span>大穴A/Bは追試枠として別管理</span></div><span class="badge gold">SELECT 3</span></div>
           <div class="statusRow"><div><b>AI予想公開後に結果管理</b><span>投票・払戻・資金更新まで接続</span></div><span class="liveBadge"><i class="liveDot"></i>SMART READY</span></div>
         </div>
       </div>
@@ -799,7 +799,7 @@ button,input,select,textarea,.tab{position:relative;z-index:3}
     <section class="section"><div class="sectionHead"><h3><span>SETTINGS</span> 資金設定</h3></div><div class="settingsCard">
       <div class="lockbar"><span id="moneyLockState">🔒 資金設定ロック中</span><button class="btn" id="editMoney">編集する</button></div>
       <div class="formRow"><div class="field"><label>開始資金</label><select id="startFunds" disabled><option value="10000">10,000円</option><option value="20000">20,000円</option><option value="30000">30,000円</option><option value="50000">50,000円</option><option value="100000">100,000円</option></select></div><div class="field"><label>現在資金</label><input id="currentFunds" type="number" disabled></div></div>
-      <p class="note">現在資金は投票・払戻の確定で自動更新し、直接変更しません。初期運用は30,000円開始。現在資金に応じて1,000 / 1,500 / 2,000円/点へ自動で上下し、90,000円以上は2,000円/点を上限とします。</p>
+      <p class="note">現在資金は投票・払戻の確定で自動更新し、直接変更しません。初期運用は30,000円開始。現在資金に応じて500 / 700 / 1,000 / 1,500 / 2,000円/点へ自動で上下し、90,000円以上は2,000円/点を上限とします。</p>
       <button class="btn save" id="saveMoney" style="display:none;width:100%">資金設定を保存</button>
     </div></section>
     <section class="section"><div class="sectionHead"><h3><span>SAFE TEST</span> 購入登録の確認モード</h3></div><div class="settingsCard">
@@ -837,12 +837,38 @@ let testMode=false;
 const storageKey=()=>testMode?TEST_KEY:KEY;
 function appLog(event,detail={}){try{const row={ts:new Date().toISOString(),mode:testMode?'TEST':'LIVE',event,detail};const logs=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');logs.push(row);localStorage.setItem(LOG_KEY,JSON.stringify(logs.slice(-2000)));console.log('[SELECT]',row)}catch(e){console.warn('[SELECT][LOG_FAIL]',e)}}
 const candidateDefs={
- favorite:{name:'本命型',subtitle:'主力｜初期運用',condition:'3.2.2 / 2.3.2 / 2.2.3｜3車ラインが◎○△または◎○×',bets:['◎○×'],status:'初期運用',history:'1〜7月シミュレーション採用',note:'主力1点｜◎→○→×'},
- medium:{name:'中穴型',subtitle:'補完｜初期運用',condition:'3.2.2｜◎○△.×他.他他 完全一致',bets:['◎△○'],status:'初期運用',history:'1〜7月シミュレーション採用',note:'補完1点｜◎→△→○'},
- bigA:{name:'大穴A',subtitle:'3.3.1 MN｜追試',condition:'◎○△順不同＋×他他順不同｜単騎=他',bets:['◎○×','○◎×','×○◎'],status:'追試',history:'48R・7的中・+10,880円・175.6%',note:'初期運用には入れずA/B別管理'},
- bigB:{name:'大穴B',subtitle:'3.3.1 MN｜追試',condition:'◎○×順不同＋△他他順不同｜単騎=他',bets:['◎○×','○◎×','×○◎'],status:'追試',history:'31R・13的中・+1,730円・118.6%',note:'初期運用には入れずA/B別管理'}
+ favorite:{name:'① 本命',subtitle:'本命｜最優先',condition:'3.2.2 / 2.3.2 / 2.2.3｜3車ラインが◎○△固定 または ◎○×固定',bets:['◎○×'],status:'採用',history:'現行SELECT最優先',note:'1点固定｜◎→○→×'},
+ cover:{name:'② 補填',subtitle:'①の補填｜最優先',condition:'3.2.2 / 2.3.2 / 2.2.3｜3車ラインが◎○×固定',bets:['◎○△'],status:'採用',history:'現行SELECT最優先',note:'1点固定｜◎→○→△'},
+ medium:{name:'③ 中穴',subtitle:'中穴｜月間補完',condition:'3.2.2 / 2.3.2 / 2.2.3｜3車ラインが◎○△固定',bets:['◎△○'],status:'採用',history:'現行SELECT最優先',note:'1点固定｜◎→△→○'},
+ bigA:{name:'大穴A',subtitle:'3.3.1 MN｜研究枠',condition:'◎○△順不同＋×他他順不同｜単騎=他',bets:['◎○×','○◎×','×○◎'],status:'追試',history:'48R・7的中・+10,880円・175.6%',note:'初期OFF｜A/B別管理'},
+ bigB:{name:'大穴B',subtitle:'3.3.1 MN｜研究枠',condition:'◎○×順不同＋△他他順不同｜単騎=他',bets:['◎○×','○◎×','×○◎'],status:'追試',history:'31R・13的中・+1,730円・118.6%',note:'初期OFF｜A/B別管理'}
 };
-const initial=()=>({version:4,startFunds:30000,currentFunds:30000,candidates:{favorite:true,medium:true,bigA:false,bigB:false},settingHistory:[],moneyHistory:[],races:[],capital:[{at:new Date().toISOString(),value:30000,type:'開始'}],sync:{imported:0,lastAt:null,lastPhase:'',lastError:''}});
+const TARGET_322_LINES=new Set(['3.2.2','2.3.2','2.2.3']);
+function normalizeLineKey(v){const nums=String(v||'').match(/\d+/g);return nums?nums.join('.'):''}
+function normalizeMarkText(v){return String(v||'').replace(/\s+/g,'').replace(/〇/g,'○').replace(/✖︎|✖/g,'×')}
+function fixedThreeMark(line,threeOrder){
+ if(!TARGET_322_LINES.has(normalizeLineKey(line)))return '';
+ const t=normalizeMarkText(threeOrder);
+ const parts=t.split(/[.・|｜/／,，]+/).filter(Boolean);
+ if(parts.includes('◎○×'))return '◎○×';
+ if(parts.includes('◎○△'))return '◎○△';
+ if(/(^|[^◎○△×])◎○×([^◎○△×]|$)/.test(t))return '◎○×';
+ if(/(^|[^◎○△×])◎○△([^◎○△×]|$)/.test(t))return '◎○△';
+ return '';
+}
+function currentSelectCandidates(line,threeOrder){
+ const mark=fixedThreeMark(line,threeOrder);
+ if(mark==='◎○×')return [
+  {id:'favorite',points:1,bets:['◎○×']},
+  {id:'cover',points:1,bets:['◎○△']}
+ ];
+ if(mark==='◎○△')return [
+  {id:'favorite',points:1,bets:['◎○×']},
+  {id:'medium',points:1,bets:['◎△○']}
+ ];
+ return [];
+}
+const initial=()=>({version:5,startFunds:30000,currentFunds:30000,candidates:{favorite:true,cover:true,medium:true,bigA:false,bigB:false},settingHistory:[],moneyHistory:[],races:[],capital:[{at:new Date().toISOString(),value:30000,type:'開始'}],sync:{imported:0,lastAt:null,lastPhase:'',lastError:''}});
 let state=load(), editMode=false, draftCandidates={...state.candidates}, moneyEdit=false;
 function normalizeLoaded(raw){
  const base=initial(), merged={...base,...(raw&&typeof raw==='object'?raw:{})};
@@ -850,8 +876,14 @@ function normalizeLoaded(raw){
  merged.sync={...base.sync,...((raw&&raw.sync)||{})};
  merged.races=Array.isArray(merged.races)?merged.races:[];
  merged.capital=Array.isArray(merged.capital)&&merged.capital.length?merged.capital:base.capital;
- merged.version=4;
- merged.races.forEach(r=>{if(!r.grade)r.grade=r.classGrade||''});
+ merged.version=5;
+ merged.races.forEach(r=>{
+  if(!r.grade)r.grade=r.classGrade||'';
+  if(r.investmentConfirmed==null && (r.status||'投票待ち')==='投票待ち'){
+   const mapped=currentSelectCandidates(r.line||'',r.threeOrder||r.three_order||'');
+   if(mapped.length)r.candidates=mapped;
+  }
+ });
  return merged;
 }
 function load(){
@@ -893,9 +925,9 @@ function persistState(){
 }
 function save(){persistState();renderAll()}
 function testRaces(){const d=todayStr(),now=new Date().toISOString();return [
- {key:`${d}|テスト別府|7`,date:d,venue:'テスト別府',raceNo:7,grade:'F2',startTime:'18:22',timeBand:'N',line:'3.2.2',threeOrder:'◎○△.他×.他他',candidates:[{id:'favorite',points:1,bets:['◎○×']}],status:'投票待ち',createdAt:now,source:'SAFE_TEST'},
- {key:`${d}|テスト松山|8`,date:d,venue:'テスト松山',raceNo:8,grade:'F2',startTime:'18:52',timeBand:'N',line:'2.3.2',threeOrder:'他×.◎○△.他他',candidates:[{id:'favorite',points:1,bets:['◎○×']}],status:'投票待ち',createdAt:now,source:'SAFE_TEST'},
- {key:`${d}|テスト小倉|9`,date:d,venue:'テスト小倉',raceNo:9,grade:'F2',startTime:'19:22',timeBand:'N',line:'2.2.3',threeOrder:'他他.他×.◎○△',candidates:[{id:'favorite',points:1,bets:['◎○×']}],status:'投票待ち',createdAt:now,source:'SAFE_TEST'}
+ {key:`${d}|テスト別府|7`,date:d,venue:'テスト別府',raceNo:7,grade:'F2',startTime:'18:22',timeBand:'N',line:'3.2.2',threeOrder:'◎○×.他△.他他',candidates:currentSelectCandidates('3.2.2','◎○×.他△.他他'),status:'投票待ち',createdAt:now,source:'SAFE_TEST'},
+ {key:`${d}|テスト松山|8`,date:d,venue:'テスト松山',raceNo:8,grade:'F2',startTime:'18:52',timeBand:'N',line:'2.3.2',threeOrder:'他△.◎○×.他他',candidates:currentSelectCandidates('2.3.2','他△.◎○×.他他'),status:'投票待ち',createdAt:now,source:'SAFE_TEST'},
+ {key:`${d}|テスト小倉|9`,date:d,venue:'テスト小倉',raceNo:9,grade:'F2',startTime:'19:22',timeBand:'N',line:'2.2.3',threeOrder:'他×.他他.◎○△',candidates:currentSelectCandidates('2.2.3','他×.他他.◎○△'),status:'投票待ち',createdAt:now,source:'SAFE_TEST'}
 ]}
 function ensureTestRace(){if(!testMode)return;if(!(state.races||[]).length){state.races=testRaces();persistState();appLog('TEST_RACES_CREATED',{keys:state.races.map(r=>r.key),count:state.races.length})}}
 function enterTestMode(){localStorage.setItem(storageKey(),JSON.stringify(state));testMode=true;sessionStorage.setItem(TEST_SESSION_KEY,'1');state=load();ensureTestRace();draftCandidates={...state.candidates};editMode=false;moneyEdit=false;appLog('TEST_MODE_ENTER');renderAll();setSfUi({agent_online:true,running:false},'安全テストモード中：SMART FINDER自動取込は停止しています。');toast('安全テストモードを開始しました')}
@@ -903,7 +935,7 @@ function exitTestMode(){persistState();appLog('TEST_MODE_EXIT');testMode=false;s
 function clearTestData(){localStorage.removeItem(TEST_KEY);localStorage.removeItem(TEST_BACKUP_KEY);appLog('TEST_DATA_CLEARED');if(testMode){state=initial();ensureTestRace();renderAll()}toast('テストデータを消去しました')}
 function yen(n){return new Intl.NumberFormat('ja-JP').format(Math.round(Number(n)||0))+'円'}
 function pct(n){return (Number(n)||0).toFixed(1)+'%'}
-function unitFor(funds){return funds>=90000?2000:funds>=60000?1500:1000}
+function unitFor(funds){return funds>=90000?2000:funds>=60000?1500:funds>=26000?1000:funds>=20000?700:500}
 function activeCandidateIds(){return Object.keys(state.candidates).filter(k=>state.candidates[k])}
 function keyOf(r){return `${r.date}|${r.venue}|${Number(r.raceNo)}`}
 function todayStr(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`}
@@ -1071,6 +1103,7 @@ function sfCandidateId(m){
  const raw=String(m.strategy_id||m.strategy||m.condition_id||m.condition_name||m.candidate||'').toLowerCase();
  if(raw.includes('biga')||raw.includes('big_a')||raw.includes('大穴a'))return 'bigA';
  if(raw.includes('bigb')||raw.includes('big_b')||raw.includes('大穴b'))return 'bigB';
+ if(raw.includes('cover')||raw.includes('補填'))return 'cover';
  if(raw.includes('mid')||raw.includes('medium')||raw.includes('中穴')||raw.includes('補完'))return 'medium';
  return 'favorite';
 }
@@ -1078,10 +1111,16 @@ function normalizeSmartFinderMatch(m){
  const raceNo=Number(m.raceNo??m.race_no??m.race??m.r??0);
  const venue=String(m.venue??m.place??m.venue_name??'').trim();
  if(!venue||!raceNo)return null;
- const id=sfCandidateId(m);
- const bets=Array.isArray(m.bets)?m.bets:(Array.isArray(m.bet)?m.bet:candidateDefs[id]?.bets||[]);
+ const line=String(m.line??m.line_pattern??m.linePattern??'').trim();
+ const threeOrder=String(m.three_order??m.threeOrder??m.ai_line_order??m.line_marks??m.mark_order??m.condition_name??'').trim();
+ let candidates=currentSelectCandidates(line,threeOrder);
+ if(!candidates.length){
+  const id=sfCandidateId(m);
+  const bets=Array.isArray(m.bets)?m.bets:(Array.isArray(m.bet)?m.bet:candidateDefs[id]?.bets||[]);
+  candidates=[{id,points:Number(m.points)||bets.length||1,bets}];
+ }
  const date=String(m.date||m.race_date||todayStr()).slice(0,10);
- return {date,venue,raceNo,grade:String(m.grade??m.class_grade??m.race_grade??'').trim(),startTime:String(m.startTime??m.start_time??m.time??'').trim(),timeBand:String(m.timeBand??m.session??m.day??'').trim(),candidates:[{id,points:Number(m.points)||bets.length||1,bets}],source:'smart_finder',line:String(m.line||''),threeOrder:String(m.three_order||m.threeOrder||''),predictionUrl:String(m.event_url||m.winticket_url||m.prediction_url||m.url||'')};
+ return {date,venue,raceNo,grade:String(m.grade??m.class_grade??m.race_grade??'').trim(),startTime:String(m.startTime??m.start_time??m.time??'').trim(),timeBand:String(m.timeBand??m.session??m.day??'').trim(),candidates,source:'smart_finder',line,threeOrder,predictionUrl:String(m.event_url||m.winticket_url||m.prediction_url||m.url||'')};
 }
 let sfBusy=false;
 async function sfPost(url,body={}){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});let d={};try{d=await r.json()}catch(e){}return {http:r.status,...d}}
@@ -1121,7 +1160,7 @@ async function stopSmartFinder(){try{await sfPost('/api/control/stop',{})}catch(
 function exportLiveLog(){
  try{
   const logs=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');
-  const payload={build:'v2.1-live-trial',exportedAt:new Date().toISOString(),mode:testMode?'TEST':'LIVE',stateSummary:{startFunds:state.startFunds,currentFunds:state.currentFunds,races:(state.races||[]).length,purchased:purchased().length,settled:settled().length,sync:state.sync||{}},logs};
+  const payload={build:'v2.2-three-rules',exportedAt:new Date().toISOString(),mode:testMode?'TEST':'LIVE',stateSummary:{startFunds:state.startFunds,currentFunds:state.currentFunds,races:(state.races||[]).length,purchased:purchased().length,settled:settled().length,sync:state.sync||{}},logs};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`SMART_FINDER_SELECT_運用ログ_${todayStr()}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},300);appLog('LOG_EXPORTED',{count:logs.length});toast('運用ログを書き出しました');
  }catch(e){appLog('LOG_EXPORT_FAIL',{error:String(e)});toast('ログを書き出せませんでした')}
@@ -1142,7 +1181,7 @@ document.getElementById('modalWrap').addEventListener('click',e=>{if(e.target.id
 const sfStart=document.getElementById('sfStartBtn'),sfRetry=document.getElementById('sfRetryBtn'),sfStop=document.getElementById('sfStopBtn');
 if(sfStart)sfStart.onclick=startSmartFinder;if(sfRetry)sfRetry.onclick=retrySmartFinder;if(sfStop)sfStop.onclick=stopSmartFinder;
 ensureTestRace();
-appLog('APP_START',{version:'v2.1-live-trial',testMode});
+appLog('APP_START',{version:'v2.2-three-rules',testMode});
 window.addEventListener('error',e=>appLog('WINDOW_ERROR',{message:e.message||'',source:e.filename||'',line:e.lineno||0}));
 appLog('LIVE_TRIAL_READY',{date:todayStr(),currentFunds:state.currentFunds,races:(state.races||[]).length});
 renderAll();
