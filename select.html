@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / 実運用UI v2.5 完成連携版</title>
+<title>WINTICKET SMART FINDER SELECT / 実運用UI v2.4 固定判定＋複利版</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -705,7 +705,7 @@ button,input,select,textarea,.tab{position:relative;z-index:3}
 </head>
 <body>
 <!-- BUILD: v2.2 CURRENT THREE SELECT RULES / MULTI-DAY OPERATION -->
-<div class="app" data-build="v2.5-fixed-6-compound-direct">
+<div class="app" data-build="v2.4-fixed-6-compound-controlfix1">
   <div class="testBanner" id="testBanner"><div>🧪 SAFE TEST MODE<small>本番の購入履歴・資金・検索結果には保存しません。</small></div><button class="btn" id="exitTestTop">本番へ戻る</button></div>
   <header class="commandHero">
     <div class="heroGrid">
@@ -742,7 +742,7 @@ button,input,select,textarea,.tab{position:relative;z-index:3}
   <main id="home" class="page active neonDashboard">
     <section class="syncStrip">
       <div class="syncStripLeft"><span class="syncDot"></span><div><b>SMART FINDER LINK</b><span id="sfSyncDetail">同じRender上のSMART FINDERを確認しています。</span></div></div>
-      <div class="syncStripRight"><span id="sfLinkState" class="linkState">確認中</span><span id="sfSyncCount" class="badge">0件取込</span><button class="btn primary" id="sfStartBtn">SMART FINDER検索開始</button><button class="btn" id="sfRetryBtn">今日を再検索</button><button class="btn danger" id="sfStopBtn" style="display:none">検索停止</button></div>
+      <div class="syncStripRight"><span id="sfLinkState" class="linkState">確認中</span><span id="sfSyncCount" class="badge">0件取込</span><button type="button" class="btn primary" id="sfStartBtn">SMART FINDER検索開始</button><button type="button" class="btn" id="sfRetryBtn">今日を再検索</button><button type="button" class="btn danger" id="sfStopBtn" style="display:none">検索停止</button></div>
     </section>
 
     <section class="dashboardGrid">
@@ -1136,8 +1136,8 @@ async function sfPost(url,body={}){const r=await fetch(url,{method:'POST',header
 function setSfUi(st,detail){
  const link=document.getElementById('sfLinkState'),start=document.getElementById('sfStartBtn'),retry=document.getElementById('sfRetryBtn'),stop=document.getElementById('sfStopBtn'),d=document.getElementById('sfSyncDetail'),count=document.getElementById('sfSyncCount');
  if(link){const online=st&&st.agent_online!==false;link.textContent=online?'接続中':'PC未接続';link.className='linkState '+(online?'online':'offline')}
- if(start){start.disabled=!!st?.running||st?.agent_online===false;start.textContent=st?.running?'検索中':'SMART FINDER検索開始'}
- if(retry)retry.disabled=!!st?.running||st?.agent_online===false;
+ if(start){start.disabled=!!st?.running;start.textContent=st?.running?'検索中':'SMART FINDER検索開始'}
+ if(retry)retry.disabled=!!st?.running;
  if(stop)stop.style.display=st?.running?'inline-block':'none';
  if(d)d.textContent=detail||'検索結果を待っています。';
  if(count)count.textContent=`${state.sync?.imported||0}件取込`;
@@ -1154,30 +1154,81 @@ async function syncFromSmartFinder(){
  }catch(e){state.sync=state.sync||{};state.sync.lastError=String(e);const link=document.getElementById('sfLinkState');if(link){link.textContent='未接続';link.className='linkState offline'}const d=document.getElementById('sfSyncDetail');if(d)d.textContent='SMART FINDERと同じRender上で開くと自動取込します。';}
 }
 async function startSmartFinder(){
+ appLog('CONTROL_CLICK_START');
  if(testMode){toast('テストモード中はSMART FINDER検索を開始しません');return}
- if(sfBusy)return;sfBusy=true;
+ if(sfBusy){toast('検索開始処理を実行中です');return}
+ sfBusy=true;
+ toast('開催場取得を開始します');
  try{
   const st=await fetch('/api/status',{cache:'no-store'}).then(r=>r.json());
   if(st.running){toast('すでに検索中です');return}
-  const d=await sfPost('/api/control/select-search',{});
-  if(!d.ok){toast('検索を開始できません');return}
-  toast('F2検索を開始しました');
- }catch(e){toast('SMART FINDERに接続できません')}finally{sfBusy=false;syncFromSmartFinder()}
+  let d=await sfPost('/api/control/load-board',{});
+  appLog('CONTROL_LOAD_BOARD_SENT',{ok:!!d.ok,http:d.http||0});
+  if(!d.ok){toast('開催場取得を開始できません');return}
+  toast('PCへ開催場取得を送信しました');
+  const deadline=Date.now()+180000;
+  while(Date.now()<deadline){
+   await new Promise(r=>setTimeout(r,1500));
+   const s=await fetch('/api/status',{cache:'no-store'}).then(r=>r.json());
+   if(!s.running&&(s.venues_info||[]).length){
+    d=await sfPost('/api/control/auto-search',{});
+    appLog('CONTROL_AUTO_SEARCH_SENT',{ok:!!d.ok,http:d.http||0,venues:(s.venues_info||[]).length});
+    if(!d.ok){toast('F2自動検索を開始できません');return}
+    toast('F2自動検索を開始しました');
+    return
+   }
+   if(s.phase==='error'){toast('開催場取得でエラー');return}
+  }
+  toast('開催場取得がタイムアウトしました');
+ }catch(e){
+  appLog('CONTROL_START_ERROR',{error:String(e)});
+  toast('SMART FINDERに接続できません');
+ }finally{
+  sfBusy=false;
+  syncFromSmartFinder();
+ }
 }
 async function retrySmartFinder(){
+ appLog('CONTROL_CLICK_RETRY');
  if(testMode){toast('テストモード中は再検索しません');return}
  try{
   const st=await fetch('/api/status',{cache:'no-store'}).then(r=>r.json());
   if(st.running){toast('すでに検索中です');return}
-  const d=await sfPost('/api/control/select-search',{preserve_display:true});
+  toast('今日の再検索を送信します');
+  const d=await sfPost('/api/control/auto-search',{});
+  appLog('CONTROL_RETRY_SENT',{ok:!!d.ok,http:d.http||0});
   if(!d.ok)toast('再検索できません');
- }catch(e){toast('SMART FINDERに接続できません')}finally{syncFromSmartFinder()}
+ }catch(e){
+  appLog('CONTROL_RETRY_ERROR',{error:String(e)});
+  toast('SMART FINDERに接続できません');
+ }finally{
+  syncFromSmartFinder();
+ }
 }
-async function stopSmartFinder(){try{await sfPost('/api/control/stop',{})}catch(e){}finally{syncFromSmartFinder()}}
+async function stopSmartFinder(){
+ appLog('CONTROL_CLICK_STOP');
+ showModal(`<h3>検索を停止しますか？</h3><p class="note">検索停止は確認後だけPCへ送信します。検索開始ボタンから停止命令は送りません。</p><div class="modalBtns"><button type="button" class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button type="button" class="btn danger" id="confirmSfStop">検索を停止</button></div>`);
+ setTimeout(()=>{
+  const b=document.getElementById('confirmSfStop');
+  if(!b)return;
+  b.onclick=async()=>{
+   try{
+    appLog('CONTROL_STOP_CONFIRMED');
+    const d=await sfPost('/api/control/stop',{});
+    appLog('CONTROL_STOP_SENT',{ok:!!d.ok,http:d.http||0});
+   }catch(e){
+    appLog('CONTROL_STOP_ERROR',{error:String(e)});
+   }finally{
+    closeModal();
+    syncFromSmartFinder();
+   }
+  };
+ },0);
+}
 function exportLiveLog(){
  try{
   const logs=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');
-  const payload={build:'v2.5-fixed-6-compound-direct',exportedAt:new Date().toISOString(),mode:testMode?'TEST':'LIVE',stateSummary:{startFunds:state.startFunds,currentFunds:state.currentFunds,races:(state.races||[]).length,purchased:purchased().length,settled:settled().length,sync:state.sync||{}},logs};
+  const payload={build:'v2.4-fixed-6-compound',exportedAt:new Date().toISOString(),mode:testMode?'TEST':'LIVE',stateSummary:{startFunds:state.startFunds,currentFunds:state.currentFunds,races:(state.races||[]).length,purchased:purchased().length,settled:settled().length,sync:state.sync||{}},logs};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`SMART_FINDER_SELECT_運用ログ_${todayStr()}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},300);appLog('LOG_EXPORTED',{count:logs.length});toast('運用ログを書き出しました');
  }catch(e){appLog('LOG_EXPORT_FAIL',{error:String(e)});toast('ログを書き出せませんでした')}
@@ -1196,9 +1247,11 @@ const exitTop=document.getElementById('exitTestTop');if(exitTop)exitTop.onclick=
 const exportLiveLogBtn=document.getElementById('exportLiveLogBtn');if(exportLiveLogBtn)exportLiveLogBtn.onclick=exportLiveLog;
 document.getElementById('modalWrap').addEventListener('click',e=>{if(e.target.id==='modalWrap')closeModal()});
 const sfStart=document.getElementById('sfStartBtn'),sfRetry=document.getElementById('sfRetryBtn'),sfStop=document.getElementById('sfStopBtn');
-if(sfStart)sfStart.onclick=startSmartFinder;if(sfRetry)sfRetry.onclick=retrySmartFinder;if(sfStop)sfStop.onclick=stopSmartFinder;
+if(sfStart)sfStart.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();startSmartFinder()});
+if(sfRetry)sfRetry.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();retrySmartFinder()});
+if(sfStop)sfStop.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();stopSmartFinder()});
 ensureTestRace();
-appLog('APP_START',{version:'v2.5-fixed-6-compound-direct',testMode});
+appLog('APP_START',{version:'v2.4-fixed-6-compound-controlfix1',testMode});
 window.addEventListener('error',e=>appLog('WINDOW_ERROR',{message:e.message||'',source:e.filename||'',line:e.lineno||0}));
 appLog('LIVE_TRIAL_READY',{date:todayStr(),currentFunds:state.currentFunds,races:(state.races||[]).length});
 renderAll();
