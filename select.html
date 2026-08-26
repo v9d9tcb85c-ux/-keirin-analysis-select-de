@@ -705,7 +705,7 @@ button,input,select,textarea,.tab{position:relative;z-index:3}
 </head>
 <body>
 <!-- BUILD: v2.2 CURRENT THREE SELECT RULES / MULTI-DAY OPERATION -->
-<div class="app" data-build="v2.4-fixed-6-compound-controlfix1">
+<div class="app" data-build="v2.4-fixed-6-compound-controlfix2-cleartoday">
   <div class="testBanner" id="testBanner"><div>🧪 SAFE TEST MODE<small>本番の購入履歴・資金・検索結果には保存しません。</small></div><button class="btn" id="exitTestTop">本番へ戻る</button></div>
   <header class="commandHero">
     <div class="heroGrid">
@@ -742,7 +742,7 @@ button,input,select,textarea,.tab{position:relative;z-index:3}
   <main id="home" class="page active neonDashboard">
     <section class="syncStrip">
       <div class="syncStripLeft"><span class="syncDot"></span><div><b>SMART FINDER LINK</b><span id="sfSyncDetail">同じRender上のSMART FINDERを確認しています。</span></div></div>
-      <div class="syncStripRight"><span id="sfLinkState" class="linkState">確認中</span><span id="sfSyncCount" class="badge">0件取込</span><button type="button" class="btn primary" id="sfStartBtn">SMART FINDER検索開始</button><button type="button" class="btn" id="sfRetryBtn">今日を再検索</button><button type="button" class="btn danger" id="sfStopBtn" style="display:none">検索停止</button></div>
+      <div class="syncStripRight"><span id="sfLinkState" class="linkState">確認中</span><span id="sfSyncCount" class="badge">0件取込</span><button type="button" class="btn primary" id="sfStartBtn">SMART FINDER検索開始</button><button type="button" class="btn" id="sfRetryBtn">今日を再検索</button><button type="button" class="btn" id="clearTodaySearchBtn">今日の未購入結果をクリア</button><button type="button" class="btn danger" id="sfStopBtn" style="display:none">検索停止</button></div>
     </section>
 
     <section class="dashboardGrid">
@@ -1225,6 +1225,30 @@ async function stopSmartFinder(){
   };
  },0);
 }
+
+function clearTodayUnpurchasedSearchResults(){
+ const d=todayStr();
+ const targets=(state.races||[]).filter(r=>r.date===d && (r.status||'投票待ち')==='投票待ち' && r.investmentConfirmed==null);
+ if(!targets.length){toast('今日の未購入検索結果はありません');return}
+ showModal(`<h3>今日の未購入検索結果を消しますか？</h3><p class="note">${d} の未購入 ${targets.length}件だけを削除します。<br>購入登録済み・結果待ち・的中/不的中・資金履歴・過去日の履歴は削除しません。</p><div class="modalBtns"><button type="button" class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button type="button" class="btn danger" id="confirmClearTodaySearch">今日の未購入だけ消す</button></div>`);
+ setTimeout(()=>{
+  const b=document.getElementById('confirmClearTodaySearch');
+  if(!b)return;
+  b.onclick=()=>{
+   const before=(state.races||[]).length;
+   state.races=(state.races||[]).filter(r=>!(r.date===d && (r.status||'投票待ち')==='投票待ち' && r.investmentConfirmed==null));
+   const removed=before-state.races.length;
+   state.sync=state.sync||{};
+   state.sync.imported=0;
+   persistState();
+   appLog('TODAY_UNPURCHASED_SEARCH_CLEARED',{date:d,removed});
+   closeModal();
+   renderAll();
+   toast(`今日の未購入検索結果 ${removed}件を削除しました`);
+  };
+ },0);
+}
+
 function exportLiveLog(){
  try{
   const logs=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');
@@ -1233,7 +1257,7 @@ function exportLiveLog(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`SMART_FINDER_SELECT_運用ログ_${todayStr()}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},300);appLog('LOG_EXPORTED',{count:logs.length});toast('運用ログを書き出しました');
  }catch(e){appLog('LOG_EXPORT_FAIL',{error:String(e)});toast('ログを書き出せませんでした')}
 }
-window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog};
+window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,clearTodayUnpurchasedSearchResults,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog};
 window.addEventListener('message',e=>{if(e.data?.type==='SMART_FINDER_RESULTS'&&e.data.races)receive(e.data.races)});
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab,.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active');renderAll()});
 document.getElementById('editCandidates').onclick=()=>{editMode=!editMode;draftCandidates={...state.candidates};document.getElementById('unsaved').style.display='none';renderCandidates()};
@@ -1246,12 +1270,13 @@ document.getElementById('clearTestBtn').onclick=()=>showModal(`<h3>テストデ�
 const exitTop=document.getElementById('exitTestTop');if(exitTop)exitTop.onclick=exitTestMode;
 const exportLiveLogBtn=document.getElementById('exportLiveLogBtn');if(exportLiveLogBtn)exportLiveLogBtn.onclick=exportLiveLog;
 document.getElementById('modalWrap').addEventListener('click',e=>{if(e.target.id==='modalWrap')closeModal()});
-const sfStart=document.getElementById('sfStartBtn'),sfRetry=document.getElementById('sfRetryBtn'),sfStop=document.getElementById('sfStopBtn');
+const sfStart=document.getElementById('sfStartBtn'),sfRetry=document.getElementById('sfRetryBtn'),sfClearToday=document.getElementById('clearTodaySearchBtn'),sfStop=document.getElementById('sfStopBtn');
 if(sfStart)sfStart.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();startSmartFinder()});
 if(sfRetry)sfRetry.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();retrySmartFinder()});
+if(sfClearToday)sfClearToday.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();clearTodayUnpurchasedSearchResults()});
 if(sfStop)sfStop.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();stopSmartFinder()});
 ensureTestRace();
-appLog('APP_START',{version:'v2.4-fixed-6-compound-controlfix1',testMode});
+appLog('APP_START',{version:'v2.4-fixed-6-compound-controlfix2-cleartoday',testMode});
 window.addEventListener('error',e=>appLog('WINDOW_ERROR',{message:e.message||'',source:e.filename||'',line:e.lineno||0}));
 appLog('LIVE_TRIAL_READY',{date:todayStr(),currentFunds:state.currentFunds,races:(state.races||[]).length});
 renderAll();
