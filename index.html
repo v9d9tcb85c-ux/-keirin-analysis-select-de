@@ -1218,15 +1218,30 @@ async function fetchJsonRetry(url,options={},tries=3,timeoutMs=25000){
  }
  throw lastErr||new Error('通信エラー');
 }
+function reconcileSmartFinderBoard(matches,st){
+ // 完了結果を受信した時だけ、前回の未購入SMART FINDER候補を今回結果へ置換する。
+ // 購入済み・結果待ち・確定済みの運用履歴は絶対に削除しない。
+ if(st?.running||String(st?.phase||'').toLowerCase()!=='done')return 0;
+ const keep=new Set((matches||[]).map(keyOf));
+ const before=state.races.length;
+ state.races=state.races.filter(r=>{
+  const isLiveCandidate=r.source==='smart_finder'&&r.date===todayStr()&&r.status==='投票待ち'&&r.investmentConfirmed==null;
+  return !isLiveCandidate||keep.has(r.key);
+ });
+ const removed=before-state.races.length;
+ if(removed){persistState();renderAll();appLog('SMART_FINDER_BOARD_RECONCILED',{removed,keep:[...keep]})}
+ return removed;
+}
 async function syncFromSmartFinder(){
  if(testMode){setSfUi({agent_online:true,running:false},'安全テストモード中：SMART FINDER自動取込は停止しています。');return}
  try{
   const st=await fetchJsonRetry('/api/status',{},3,25000);updateProcessBoard(st);
   const matches=(st.matches||[]).map(normalizeSmartFinderMatch).filter(Boolean);
+  const removed=reconcileSmartFinderBoard(matches,st);
   const rr=receive(matches,{silent:true});
   state.sync=state.sync||{};state.sync.imported=(state.sync.imported||0)+rr.added;state.sync.lastAt=new Date().toISOString();state.sync.lastPhase=st.phase||'';state.sync.lastError='';localStorage.setItem(storageKey(),JSON.stringify(state));
   const phase=st.running?'検索中':st.phase==='done'?'検索完了':st.phase==='error'?'エラー':'待機';
-  setSfUi(st,`${phase}｜検出 ${matches.length}件｜新規 ${rr.added}件${rr.skipped?`｜SELECT除外 ${rr.skipped}件`:''}`);
+  setSfUi(st,`${phase}｜検出 ${matches.length}件｜新規 ${rr.added}件${removed?`｜前回候補整理 ${removed}件`:''}${rr.skipped?`｜SELECT除外 ${rr.skipped}件`:''}`);
  }catch(e){state.sync=state.sync||{};state.sync.lastError=String(e);const link=document.getElementById('sfLinkState');if(link){link.textContent='再接続中';link.className='linkState offline'}const d=document.getElementById('sfSyncDetail');if(d)d.textContent='通信確認を自動再試行しています。前回の完了結果はそのまま残します。';updateProcessBoard({running:false,phase:'reconnect'},'通信確認を自動再試行しています。前回の完了結果は消しません。');}
 }
 async function startSmartFinder(){
