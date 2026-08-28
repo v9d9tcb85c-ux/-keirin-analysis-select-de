@@ -1356,8 +1356,42 @@ function currentSelectCandidates(venue,line,threeOrder){
  const r=selectBestProfitRule(venue,line,threeOrder);
  if(!r)return [];
  const rank=r.decision==='BET'?'S':'A';
- return [{id:r.rule_id,ruleId:r.rule_id,rank,decision:r.decision,stars:r.decision==='BET'?'★★★':'★★',bankGroup:r.group,points:Number(r.points)||1,bets:[r.bet_pattern],betType:r.bet_type,roi:Number(r.roi)||0,roiEx1:Number(r.roi_ex_top1)||0,baseDecision:r.base_decision,modifier:r.modifier||null}];
+ return [enrichCandidateStats({id:r.rule_id,ruleId:r.rule_id,rank,decision:r.decision,stars:r.decision==='BET'?'★★★':'★★',bankGroup:r.group,points:Number(r.points)||1,bets:[r.bet_pattern],betType:r.bet_type,roi:Number(r.roi)||0,roiEx1:Number(r.roi_ex_top1)||0,roiEx3:r.roi_ex_top3==null?null:Number(r.roi_ex_top3),sampleN:Number(r.N)||null,baseDecision:r.base_decision,modifier:r.modifier||null,reason:r.modifier?.note||''},{venue,line,threeOrder})];
 }
+function profitRuleById(id){return PROFIT_RULES.find(x=>String(x.rule_id)===String(id))||null}
+function enrichCandidateStats(c,race){
+ c={...(c||{})};
+ const id=String(c.ruleId||c.rule_id||c.id||'');
+ const rule=profitRuleById(id);
+ const gid=String(c.bankGroup||c.bank_group||race?.bankGroup||bankGroupOf(race?.venue||''));
+ const gm=rule?applyGroupModifier(rule,gid):{decision:null,modifier:null};
+ const first=(...xs)=>xs.find(v=>v!==undefined&&v!==null&&v!=='');
+ const num=(...xs)=>{const v=first(...xs);if(v===undefined)return null;const n=Number(v);return Number.isFinite(n)?n:null};
+ c.id=id||c.id;c.ruleId=id||c.ruleId;
+ c.betType=first(c.betType,c.bet_type,rule?.bet_type)||'—';
+ c.points=Number(first(c.points,rule?.points,(c.bets||[]).length,1))||1;
+ c.stars=first(c.stars,rule?.stars)||'';
+ c.sampleN=num(c.sampleN,c.sample_n,c.N,rule?.N);
+ c.roi=num(c.roi,rule?.roi);
+ c.roiEx1=num(c.roiEx1,c.roi_ex_top1,c.roi_ex1,rule?.roi_ex_top1);
+ c.roiEx3=num(c.roiEx3,c.roi_ex_top3,c.roi_ex3,rule?.roi_ex_top3);
+ c.hitRate=num(c.hitRate,c.hit_rate);
+ c.avgPayout=num(c.avgPayout,c.avg_payout);
+ c.roi2025=num(c.roi2025,c.roi_2025,c.year2025,c.year_2025,c.yearly?.['2025']?.roi);
+ c.roi2026=num(c.roi2026,c.roi_2026,c.year2026,c.year_2026,c.yearly?.['2026']?.roi);
+ c.bankGroup=gid;
+ c.baseDecision=first(c.baseDecision,c.base_decision,rule?.base_decision)||'';
+ c.decision=first(c.decision,c.finalDecision,c.final_decision,gm?.decision,c.baseDecision)||'';
+ c.modifier=c.modifier||gm?.modifier||null;
+ c.tier=first(c.tier,c.rank)||'';
+ c.rank=first(c.rank,(c.decision==='BET'?'S':c.decision==='CHECK'?'A':''))||'A';
+ c.reason=first(c.reason,c.decisionReason,c.decision_reason,c.note,c.modifier?.note,
+   rule?`正式ルール ${rule.rule_id}｜全場判定 ${rule.base_decision||'—'}${gid?`｜場G ${gid}`:''}`:'')||'';
+ c.yearly=c.yearly||{};
+ return c;
+}
+function enrichRaceCandidates(r){if(!r)return r;r.candidates=(r.candidates||[]).map(c=>enrichCandidateStats(c,r));return r}
+
 const initial=()=>({version:7,startFunds:30000,currentFunds:30000,candidates:{"ALL-001":true,"ALL-002":true,"ALL-003":true,"ALL-004":true,"ALL-005":true,"ALL-006":true,"ALL-007":true,"ALL-008":true,"ALL-009":true,"ALL-010":true,"OTH-001":true,"OTH-002":true,"OTH-003":true,"OTH-004":true,"OTH-005":true,"OTH-006":true,"OTH-007":true,"OTH-008":true,"OTH-009":true,"OTH-010":true,"OTH-011":true,"OTH-012":true,"OTH-013":true,"OTH-014":true,"OTH-015":true,"OTH-016":true,"OTH-017":true},settingHistory:[],moneyHistory:[],races:[],capital:[{at:new Date().toISOString(),value:30000,type:'開始'}],sync:{imported:0,lastAt:null,lastPhase:'',lastError:''}});
 let state=load(), editMode=false, draftCandidates={...state.candidates}, moneyEdit=false;
 function normalizeLoaded(raw){
@@ -1375,6 +1409,7 @@ function normalizeLoaded(raw){
    const mapped=currentSelectCandidates(r.venue||'',r.line||'',r.threeOrder||r.three_order||'');
    if(mapped.length)r.candidates=mapped;
   }
+  enrichRaceCandidates(r);
  });
  return merged;
 }
@@ -1612,7 +1647,7 @@ function renderStats(){const s=settled(),inv=investedTotal(),pay=payoutTotal(),r
  document.getElementById('candidateStats').innerHTML=Object.keys(candidateDefs).map(id=>{const races=s.filter(r=>(r.candidates||[]).some(c=>c.id===id));let iv=0,pv=0,h=0;races.forEach(r=>{const c=(r.candidates||[]).find(x=>x.id===id);const totalPts=racePoints(r);const cp=Number(c?.points)||c?.bets?.length||1;const share=totalPts?cp/totalPts:0;iv+=(r.investmentConfirmed||0)*share;pv+=(r.payout||0)*share;if(r.status==='的中')h++});return `<div class="historyCard"><strong>${candidateDefs[id].name}</strong>　${races.length}R / 的中 ${h}R<br>参考投資 ${yen(iv)}　参考払戻 ${yen(pv)}　参考回収率 ${pct(iv?pv/iv*100:0)}</div>`}).join('')}
 function renderSettings(){document.getElementById('startFunds').value=String(state.startFunds);document.getElementById('currentFunds').value=state.currentFunds;document.getElementById('startFunds').disabled=!moneyEdit;document.getElementById('moneyLockState').textContent=moneyEdit?'🔓 資金設定変更中':'🔒 資金設定ロック中';document.getElementById('saveMoney').style.display=moneyEdit?'block':'none';const b=document.getElementById('testModeBtn'),s=document.getElementById('testModeState'),banner=document.getElementById('testBanner');if(b)b.textContent=testMode?'本番モードへ戻る':'安全テストモードを開始';if(s){const pc=purchased().length,sc=settled().length;s.innerHTML=testMode?`<b>テスト中</b>｜3件のテストレースで再計算確認。購入 ${pc}件 / 確定 ${sc}件。本番の購入・払戻・資金には反映されません。`:'本番モードです。テストを始めても現在の本番データは変更しません。'}if(banner)banner.classList.toggle('show',testMode)}
 function renderAll(){renderHome();renderCandidates();renderOperation();renderHistory();renderStats();renderSettings()}
-function receive(races,options={}){if(!Array.isArray(races))races=[races];let added=0,merged=0,skipped=0;for(const raw of races){if(!raw||!raw.date||!raw.venue||raw.raceNo==null)continue;const key=keyOf(raw);let r=state.races.find(x=>x.key===key);const incoming=(raw.candidates||[]).filter(c=>state.candidates[c.id]!==false).map(c=>({id:c.id,points:Number(c.points)||((c.bets||[]).length)||1,bets:c.bets||candidateDefs[c.id]?.bets||[]}));if(!incoming.length){skipped++;continue}if(!r){r={key,date:raw.date,venue:raw.venue,raceNo:Number(raw.raceNo),grade:raw.grade||raw.classGrade||'',startTime:raw.startTime||'',timeBand:raw.timeBand||'',candidates:[],status:'投票待ち',createdAt:new Date().toISOString(),source:raw.source||'',line:raw.line||'',threeOrder:raw.threeOrder||'',bankGroup:raw.bankGroup||bankGroupOf(raw.venue),predictionUrl:raw.predictionUrl||'',shadowOos:raw.shadowOos||[]};state.races.push(r);added++}else merged++;for(const c of incoming){const ex=r.candidates.find(x=>x.id===c.id);if(!ex)r.candidates.push(c);else{Object.assign(ex,c);ex.bets=[...new Set([...(ex.bets||[]),...(c.bets||[])])];ex.points=Math.max(ex.points||0,c.points||0)}}r.shadowOos=raw.shadowOos||r.shadowOos||[];r.startTime=raw.startTime||r.startTime;r.timeBand=raw.timeBand||r.timeBand;r.grade=raw.grade||raw.classGrade||r.grade||'';r.line=raw.line||r.line||'';r.threeOrder=raw.threeOrder||r.threeOrder||'';r.bankGroup=raw.bankGroup||r.bankGroup||bankGroupOf(r.venue);r.predictionUrl=raw.predictionUrl||r.predictionUrl||'';r.source=raw.source||r.source||''}if(added||merged){localStorage.setItem(storageKey(),JSON.stringify(state));renderAll()}if(!options.silent)toast(`取込完了：新規 ${added} / 統合 ${merged}${skipped?` / 除外 ${skipped}`:''}`);return {added,merged,skipped}}
+function receive(races,options={}){if(!Array.isArray(races))races=[races];let added=0,merged=0,skipped=0;for(const raw of races){if(!raw||!raw.date||!raw.venue||raw.raceNo==null)continue;const key=keyOf(raw);let r=state.races.find(x=>x.key===key);const incoming=(raw.candidates||[]).filter(c=>state.candidates[c.id]!==false).map(c=>enrichCandidateStats({...c,id:c.id||c.ruleId||c.rule_id,points:Number(c.points)||((c.bets||[]).length)||1,bets:c.bets||candidateDefs[c.id]?.bets||[]},raw));if(!incoming.length){skipped++;continue}if(!r){r={key,date:raw.date,venue:raw.venue,raceNo:Number(raw.raceNo),grade:raw.grade||raw.classGrade||'',startTime:raw.startTime||'',timeBand:raw.timeBand||'',candidates:[],status:'投票待ち',createdAt:new Date().toISOString(),source:raw.source||'',line:raw.line||'',threeOrder:raw.threeOrder||'',bankGroup:raw.bankGroup||bankGroupOf(raw.venue),predictionUrl:raw.predictionUrl||'',shadowOos:raw.shadowOos||[]};state.races.push(r);added++}else merged++;for(const c of incoming){const ex=r.candidates.find(x=>x.id===c.id);if(!ex)r.candidates.push(c);else{Object.assign(ex,c);ex.bets=[...new Set([...(ex.bets||[]),...(c.bets||[])])];ex.points=Math.max(ex.points||0,c.points||0)}}r.shadowOos=raw.shadowOos||r.shadowOos||[];r.startTime=raw.startTime||r.startTime;r.timeBand=raw.timeBand||r.timeBand;r.grade=raw.grade||raw.classGrade||r.grade||'';r.line=raw.line||r.line||'';r.threeOrder=raw.threeOrder||r.threeOrder||'';r.bankGroup=raw.bankGroup||r.bankGroup||bankGroupOf(r.venue);r.predictionUrl=raw.predictionUrl||r.predictionUrl||'';r.source=raw.source||r.source||''}if(added||merged){localStorage.setItem(storageKey(),JSON.stringify(state));renderAll()}if(!options.silent)toast(`取込完了：新規 ${added} / 統合 ${merged}${skipped?` / 除外 ${skipped}`:''}`);return {added,merged,skipped}}
 function markBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;const rank=rankForRace(r),unit=unitForRank(state.currentFunds,rank),inv=unit*racePoints(r);if(state.currentFunds<inv){toast('現在資金が予定投資額を下回っています');return}showModal(`<h3>購入登録しますか？</h3><p class="note">${esc(r.venue)} ${r.raceNo}R<br>${rank}ランク複利：1点 ${yen(unit)} × ${racePoints(r)}点 = <b>${yen(inv)}</b><br>実際に購入したレースだけ登録してください。確定すると運用台帳へ追加し、現在資金から購入額を差し引きます。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn primary" onclick="SMART_SELECT.confirmBet('${esc(key)}')">確定</button></div>`)}
 function confirmBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;const rank=rankForRace(r),unit=unitForRank(state.currentFunds,rank),inv=unit*racePoints(r);r.rankConfirmed=rank;r.unitConfirmed=unit;r.investmentConfirmed=inv;r.status='結果待ち';r.betAt=new Date().toISOString();recalculateOperations();appLog('PURCHASE_CONFIRMED',{key,rank:r.rankConfirmed,rate:COMPOUND_RATE[r.rankConfirmed],investment:inv,unitConfirmed:unit,funds:state.currentFunds});save();closeModal();toast(testMode?'テスト購入を運用台帳へ登録しました':'購入を運用台帳へ登録しました')}
 function openResult(key){const r=state.races.find(x=>x.key===key);if(!r)return;const unit=Number(r.unitConfirmed)||100;const mult=unit/100;showModal(`<h3>結果を反映</h3><p class="note">${esc(r.venue)} ${r.raceNo}R　投資 ${yen(r.investmentConfirmed||0)}<br>1点金額 ${yen(unit)}（WINTICKET確定払戻 × ${mult}倍）</p><div class="field"><label>WINTICKET確定払戻（100円）</label><input id="payoutInput" type="number" min="0" step="10" value="0" oninput="SMART_SELECT.updatePayoutPreview('${esc(key)}')"></div><div class="settingsCard" style="margin-top:10px"><div class="note">実際に受け取る払戻</div><div id="payoutPreview" style="font-size:28px;font-weight:900;margin-top:4px">${yen(0)}</div><div class="note">表示払戻 × ${mult}倍</div></div><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" onclick="SMART_SELECT.confirmResult('${esc(key)}')">払戻を確定</button></div>`)}
@@ -1662,7 +1697,8 @@ function confirmOperationDelete(key){
 
 function openDetail(key){
  const r=state.races.find(x=>x.key===key);if(!r)return;
- const cards=(r.candidates||[]).map(c=>{
+ const cards=(r.candidates||[]).map(rawC=>{
+   const c=enrichCandidateStats(rawC,r);
    const name=candidateDefs[c.id]?.name||esc(c.id);
    const betType=esc(c.betType||'—');
    const bets=(c.bets||[]).length?(c.bets||[]).map(b=>`<span class="badge gold">${esc(b)}</span>`).join(''):'<span class="badge">—</span>';
@@ -1692,9 +1728,12 @@ function openDetail(key){
        <div class="detailMetric"><small>判定</small><b>${esc(c.decision||'—')} ${c.tier?'/ '+esc(c.tier):''}</b></div>
      </div>
      <p class="note">${candidateDefs[c.id]?.condition||''}</p>
+     ${c.modifier?`<p class="note"><b>場G補正内容：</b>${esc(c.modifier.group||c.bankGroup||'')} / ${esc(c.modifier.action||'KEEP')} / ${esc(c.modifier.note||'')}</p>`:''}
+     ${c.reason?`<p class="note"><b>判定理由：</b>${esc(c.reason)}</p>`:''}
    </div>`;
  }).join('');
- const shadow=(r.shadowOos||[]).length?`<div class="settingsCard" style="margin-top:8px"><b>限定OOS補助候補・シャドー</b><pre style="white-space:pre-wrap">${esc(shadowOosText({shadow_oos:r.shadowOos}))}</pre></div>`:'';
+ const shadowArr=(r.shadowOos||[]).length?r.shadowOos:(r.candidates||[]).flatMap(c=>c.shadowOos||c.shadow_oos||[]);
+ const shadow=shadowArr.length?`<div class="settingsCard" style="margin-top:8px"><b>限定OOS補助候補・シャドー</b><pre style="white-space:pre-wrap">${esc(shadowOosText({shadow_oos:shadowArr}))}</pre></div>`:'<div class="settingsCard" style="margin-top:8px"><b>OOSシャドー</b><p class="note">該当なし / データ未供給</p></div>';
  showModal(`<h3>${esc(r.venue)} ${r.raceNo}R 詳細</h3><div class="raceMeta">${r.date} ${esc(r.startTime||'--:--')} ${esc(r.timeBand||'')}</div>${r.line?`<p class="note">場グループ：${esc(r.bankGroup||bankGroupOf(r.venue)||'未分類')}<br>ライン：${esc(r.line)}${r.threeOrder?`<br>3車ライン印：${esc(r.threeOrder)}`:''}</p>`:''}${cards}${shadow}${r.predictionUrl?`<div class="actions"><a class="btn primary" href="${esc(r.predictionUrl)}" target="_blank" rel="noopener">WINTICKETで見る</a></div>`:''}<div class="modalBtns"><button class="btn primary" onclick="SMART_SELECT.closeModal()">閉じる</button></div>`);
 }
 
@@ -1718,7 +1757,7 @@ function normalizeSmartFinderMatch(m){
  let candidates=[];
  if(m.rule_id){
    const tickets=Array.isArray(m.tickets)?m.tickets:(m.bet?[String(m.bet)]:[]);
-   candidates=[{id:String(m.rule_id),ruleId:String(m.rule_id),rank:String(m.rank||((m.decision||'CHECK')==='BET'?'S':'A')),decision:String(m.decision||'CHECK'),stars:String(m.stars||((m.rank||'')==='SP'?'★★★★':(m.decision||'CHECK')==='BET'?'★★★':'★★')),bankGroup:String(m.bank_group||bankGroupOf(venue)),points:Number(m.points)||tickets.length||1,bets:tickets,betType:String(m.bet_type||'3連単'),roi:Number(m.roi)||0,roiEx1:Number(m.roi_ex_top1)||0,roiEx3:Number(m.roi_ex_top3)||0,hitRate:m.hit_rate==null?null:Number(m.hit_rate),avgPayout:m.avg_payout==null?null:Number(m.avg_payout),sampleN:m.sample_n==null?null:Number(m.sample_n),tier:String(m.tier||''),shadowOos:Array.isArray(m.shadow_oos)?m.shadow_oos:[]}];
+   candidates=[enrichCandidateStats({id:String(m.rule_id),ruleId:String(m.rule_id),rank:String(m.rank||((m.decision||m.final_decision||'CHECK')==='BET'?'S':'A')),decision:String(m.final_decision||m.decision||''),stars:String(m.stars||''),bankGroup:String(m.bank_group||bankGroupOf(venue)),points:Number(m.points)||tickets.length||1,bets:tickets,betType:String(m.bet_type||'3連単'),roi:m.roi==null?null:Number(m.roi),roiEx1:m.roi_ex_top1==null?null:Number(m.roi_ex_top1),roiEx3:m.roi_ex_top3==null?null:Number(m.roi_ex_top3),hitRate:m.hit_rate==null?null:Number(m.hit_rate),avgPayout:m.avg_payout==null?null:Number(m.avg_payout),sampleN:(m.sample_n??m.N)==null?null:Number(m.sample_n??m.N),roi2025:(m.roi_2025??m.roi2025)==null?null:Number(m.roi_2025??m.roi2025),roi2026:(m.roi_2026??m.roi2026)==null?null:Number(m.roi_2026??m.roi2026),yearly:m.yearly||null,tier:String(m.tier||''),reason:String(m.decision_reason||m.reason||m.note||''),modifier:m.modifier||null,shadowOos:Array.isArray(m.shadow_oos)?m.shadow_oos:[]},{venue,bankGroup:String(m.bank_group||bankGroupOf(venue))})];
  }else{
    candidates=currentSelectCandidates(venue,line,threeOrder);
  }
@@ -1879,5 +1918,6 @@ They never replace BASE and never receive automatic stake. -->
 <!-- v3.11:
 Shadow OOS candidates are logged locally for later settlement.
 No extra acquisition, network, API or DOM work is performed. -->
+<!-- v3.13.6 DETAIL_STATS_FIX: candidate analysis fields are preserved through receive() and hydrated from PROFIT_RULES. Search/acquisition logic unchanged. -->
 </body>
 </html>
