@@ -717,6 +717,30 @@ button,input,select,textarea,.tab{position:relative;z-index:3}
 .sfStep.wait{opacity:.62}.sfTimeoutNote{margin-top:9px;color:#8ba1c2;font-size:9px}
 @media(max-width:760px){.sfSteps{grid-template-columns:1fr 1fr}.sfProcessTop h3{font-size:18px}.sfProcessCount{font-size:18px}}
 
+
+/* v3.13.5 TODAY'S BOARD: 買い目をメールを開かず常時確認 */
+.raceDataLine{
+  grid-template-columns:minmax(92px,1.0fr) minmax(98px,1.0fr) minmax(150px,1.65fr) minmax(62px,.62fr) minmax(48px,.50fr)!important;
+}
+.raceBet{min-width:0!important;padding-left:6px!important;border-left:1px solid rgba(111,165,255,.16)}
+.raceBet small{display:block;color:#7f9abb;font-size:9px;letter-spacing:.08em;margin-bottom:3px}
+.raceBetType{font-size:10px;color:#67dfff;font-weight:900;margin-right:6px;white-space:nowrap}
+.raceBetTickets{display:inline-flex;gap:4px;flex-wrap:wrap;vertical-align:middle}
+.raceBetTickets .ticket{display:inline-block;padding:3px 7px;border-radius:7px;border:1px solid rgba(247,198,61,.38);background:rgba(247,198,61,.08);color:#fff4b1;font-size:11px;font-weight:900;white-space:nowrap}
+.detailGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px;margin-top:9px}
+.detailMetric{border:1px solid rgba(86,131,255,.18);border-radius:9px;padding:7px 9px;background:rgba(4,15,36,.42);min-width:0}
+.detailMetric small{display:block;color:#7f9abb;font-size:9px;margin-bottom:3px}
+.detailMetric b{font-size:13px;overflow-wrap:anywhere}
+.detailBetLine{margin-top:9px;padding:9px;border:1px solid rgba(45,209,255,.22);background:rgba(22,164,255,.05);border-radius:9px}
+.detailBetLine strong{color:#62e7ff}
+@media(max-width:1050px){.raceDataLine{grid-template-columns:minmax(90px,1fr) minmax(90px,1fr) minmax(145px,1.55fr) minmax(58px,.6fr) minmax(46px,.48fr)!important}}
+@media(max-width:760px){
+  .raceDataLine{display:flex!important;flex-wrap:wrap!important}
+  .raceTags,.raceOrder,.raceBet,.raceMiniMetric{flex:1 1 46%;border-left:0!important;padding-left:0!important}
+  .raceBet{flex-basis:100%}
+  .detailGrid{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body>
@@ -1075,8 +1099,14 @@ function raceHtml(r,isNext,accentIndex=0){
  const pts=racePoints(r),unit=r.investmentConfirmed!=null?r.unitConfirmed:unitForRace(r,state.currentFunds),tags=(r.candidates||[]).map(c=>candTag(c.id)).join(''),accent=['blue','green','gold'][Math.abs(Number(accentIndex)||0)%3];
  const action=r.status==='投票待ち'?`<button class="btn primary" onclick="SMART_SELECT.markBet('${esc(r.key)}')">購入登録</button>`:r.status==='結果待ち'?`<button class="btn save" onclick="SMART_SELECT.openResult('${esc(r.key)}')">結果を入力</button>`:'';
  if(isNext)return nextTargetHtml(r);
- return `<div class="raceCard neonRace accent-${accent}"><div class="venueRail"><span>${esc(r.venue)}</span><b>${esc(r.raceNo)}R</b></div><div class="raceCardBody"><div class="raceMetaLine"><span>▣ ${esc(r.date)}</span><span>${esc(r.startTime||'--:--')}</span><span>${esc(r.grade||'—')}</span><span>${esc(r.timeBand||'—')}</span><span>${esc(r.line||'—')}</span></div><div class="raceDataLine"><div class="raceTags">${tags}${statusBadge(r.status)}</div><div class="raceOrder"><small>並び</small><b>${esc(r.threeOrder||'—')}</b></div><div class="raceMiniMetric"><small>1点金額</small><b>${yen(unit)}</b></div><div class="raceMiniMetric"><small>点数</small><b>${pts}点</b></div><div class="raceMiniMetric"><small>払戻</small><b>${r.payout!=null?yen(r.payout):'—'}</b></div></div></div><div class="raceCardActions">${action}<button class="btn" onclick="SMART_SELECT.openDetail('${esc(r.key)}')">詳細</button></div></div>`;
+ const cs=r.candidates||[];
+ const betTypes=[...new Set(cs.map(c=>String(c.betType||'').trim()).filter(Boolean))];
+ const bets=raceBets(r);
+ const betTypeText=betTypes.length?betTypes.join(' / '):'券種—';
+ const betHtml=bets.length?bets.map(b=>`<span class="ticket">${esc(b)}</span>`).join(''):'<span class="ticket">—</span>';
+ return `<div class="raceCard neonRace accent-${accent}"><div class="venueRail"><span>${esc(r.venue)}</span><b>${esc(r.raceNo)}R</b></div><div class="raceCardBody"><div class="raceMetaLine"><span>▣ ${esc(r.date)}</span><span>${esc(r.startTime||'--:--')}</span><span>${esc(r.grade||'—')}</span><span>${esc(r.timeBand||'—')}</span><span>${esc(r.line||'—')}</span></div><div class="raceDataLine"><div class="raceTags">${tags}${statusBadge(r.status)}</div><div class="raceOrder"><small>並び</small><b>${esc(r.threeOrder||'—')}</b></div><div class="raceBet"><small>券種 / 買い目</small><span class="raceBetType">${esc(betTypeText)}</span><span class="raceBetTickets">${betHtml}</span></div><div class="raceMiniMetric"><small>1点金額</small><b>${yen(unit)}</b></div><div class="raceMiniMetric"><small>点数</small><b>${pts}点</b></div></div></div><div class="raceCardActions">${action}<button class="btn" onclick="SMART_SELECT.openDetail('${esc(r.key)}')">詳細</button></div></div>`;
 }
+
 function renderCandidates(){document.getElementById('candidateList').classList.toggle('editing',editMode);document.getElementById('lockState').textContent=editMode?'🔓 変更モード':'🔒 設定ロック中';document.getElementById('editCandidates').textContent=editMode?'変更をやめる':'設定を変更する';document.getElementById('savedCount').textContent=`現在保存中 ${activeCandidateIds().length}条件`;document.getElementById('candidateList').innerHTML=Object.entries(candidateDefs).map(([id,d])=>`<div class="candidate"><div class="candTop"><div><h4>${d.name} <span class="badge ${d.status==='追試'?'gold':'green'}">${d.status}</span></h4><div class="candDesc">${d.subtitle}<br>${d.condition}</div></div><div class="toggle ${draftCandidates[id]?'on':''}" data-cand="${id}"><i></i></div></div><div class="tagRow">${d.bets.map(x=>`<span class="badge gold">${x}</span>`).join('')}</div><div class="candDesc" style="margin-top:8px">過去検証：${d.history}<br>${d.note}</div></div>`).join('');document.querySelectorAll('[data-cand]').forEach(e=>e.onclick=()=>{if(!editMode)return;const id=e.dataset.cand;draftCandidates[id]=!draftCandidates[id];e.classList.toggle('on',draftCandidates[id]);document.getElementById('unsaved').style.display=JSON.stringify(draftCandidates)!==JSON.stringify(state.candidates)?'flex':'none'});
  document.getElementById('settingHistory').innerHTML=state.settingHistory.length?state.settingHistory.slice(-3).reverse().map((h,i)=>`<div class="historyCard"><strong>${new Date(h.at).toLocaleString('ja-JP')}</strong><br>${Object.keys(h.value).filter(k=>h.value[k]).map(k=>candidateDefs[k]?.name||k).join(' / ')}<div class="actions"><button class="btn" onclick="SMART_SELECT.restoreSetting(${state.settingHistory.length-1-i})">この設定へ戻す</button></div></div>`).join(''):'<div class="empty">保存履歴はまだありません</div>';
 }
@@ -1152,7 +1182,44 @@ function confirmOperationDelete(key){
  recalculateOperations();appLog('OPERATION_PURCHASE_CANCELLED',{key,before,funds:state.currentFunds});save();closeModal();toast('購入登録を取り消し、資金推移を再計算しました');
 }
 
-function openDetail(key){const r=state.races.find(x=>x.key===key);if(!r)return;showModal(`<h3>${esc(r.venue)} ${r.raceNo}R 詳細</h3><div class="raceMeta">${r.date} ${esc(r.startTime||'--:--')} ${esc(r.timeBand||'')}</div>${r.line?`<p class="note">場グループ：${esc(r.bankGroup||bankGroupOf(r.venue)||'未分類')}<br>ライン：${esc(r.line)}${r.threeOrder?`<br>3車ライン印：${esc(r.threeOrder)}`:''}</p>`:''}${(r.candidates||[]).map(c=>`<div class="settingsCard" style="margin-top:8px"><b>${candidateDefs[c.id]?.name||esc(c.id)}</b><div class="note">${esc(c.stars||'')} 複利ランク：${esc(c.rank||'A')} / 現在の1点推奨 ${yen(unitForRank(state.currentFunds,c.rank||'A'))}<br>ROI：${c.roi!=null?(Number(c.roi)*100).toFixed(1)+'%':'—'} / 的中率：${c.hitRate!=null?(Number(c.hitRate)*100).toFixed(1)+'%':'—'} / 平均配当：${c.avgPayout!=null?yen(c.avgPayout):'—'}</div><div class="tagRow">${(c.bets||[]).map(b=>`<span class="badge gold">${esc(b)}</span>`).join('')}</div><p class="note">${candidateDefs[c.id]?.condition||''}</p></div>`).join('')}${(r.shadowOos||[]).length?`<div class="settingsCard" style="margin-top:8px"><b>限定OOS補助候補・シャドー</b><pre style="white-space:pre-wrap">${esc(shadowOosText({shadow_oos:r.shadowOos}))}</pre></div>`:''}${r.predictionUrl?`<div class="actions"><a class="btn primary" href="${esc(r.predictionUrl)}" target="_blank" rel="noopener">WINTICKETで見る</a></div>`:''}<div class="modalBtns"><button class="btn primary" onclick="SMART_SELECT.closeModal()">閉じる</button></div>`)}
+function openDetail(key){
+ const r=state.races.find(x=>x.key===key);if(!r)return;
+ const cards=(r.candidates||[]).map(c=>{
+   const name=candidateDefs[c.id]?.name||esc(c.id);
+   const betType=esc(c.betType||'—');
+   const bets=(c.bets||[]).length?(c.bets||[]).map(b=>`<span class="badge gold">${esc(b)}</span>`).join(''):'<span class="badge">—</span>';
+   const roi=c.roi!=null?(Number(c.roi)*100).toFixed(1)+'%':'—';
+   const roi1=c.roiEx1!=null?(Number(c.roiEx1)*100).toFixed(1)+'%':'—';
+   const roi3=c.roiEx3!=null?(Number(c.roiEx3)*100).toFixed(1)+'%':'—';
+   const hit=c.hitRate!=null?(Number(c.hitRate)*100).toFixed(1)+'%':'—';
+   const avg=c.avgPayout!=null?yen(c.avgPayout):'—';
+   const n=c.sampleN!=null?String(c.sampleN):'—';
+   const y25=(c.roi2025??c.year2025??c.yearly?.['2025']?.roi);
+   const y26=(c.roi2026??c.year2026??c.yearly?.['2026']?.roi);
+   const y25t=y25!=null?(Number(y25)*100).toFixed(1)+'%':'—';
+   const y26t=y26!=null?(Number(y26)*100).toFixed(1)+'%':'—';
+   return `<div class="settingsCard" style="margin-top:8px">
+     <b>${name}</b>
+     <div class="detailBetLine"><strong>${betType}</strong> ｜ ${bets} ｜ 1点 ${yen(unitForRank(state.currentFunds,c.rank||'A'))}</div>
+     <div class="detailGrid">
+       <div class="detailMetric"><small>評価</small><b>${esc(c.stars||'')} / ${esc(c.rank||'A')}</b></div>
+       <div class="detailMetric"><small>過去N</small><b>${esc(n)}R</b></div>
+       <div class="detailMetric"><small>的中率</small><b>${hit}</b></div>
+       <div class="detailMetric"><small>平均配当</small><b>${avg}</b></div>
+       <div class="detailMetric"><small>回収率</small><b>${roi}</b></div>
+       <div class="detailMetric"><small>最大1本除外ROI</small><b>${roi1}</b></div>
+       <div class="detailMetric"><small>最大3本除外ROI</small><b>${roi3}</b></div>
+       <div class="detailMetric"><small>年度再現性</small><b>2025 ${y25t} / 2026 ${y26t}</b></div>
+       <div class="detailMetric"><small>場グループ補正</small><b>${esc(c.bankGroup||r.bankGroup||bankGroupOf(r.venue)||'未分類')}</b></div>
+       <div class="detailMetric"><small>判定</small><b>${esc(c.decision||'—')} ${c.tier?'/ '+esc(c.tier):''}</b></div>
+     </div>
+     <p class="note">${candidateDefs[c.id]?.condition||''}</p>
+   </div>`;
+ }).join('');
+ const shadow=(r.shadowOos||[]).length?`<div class="settingsCard" style="margin-top:8px"><b>限定OOS補助候補・シャドー</b><pre style="white-space:pre-wrap">${esc(shadowOosText({shadow_oos:r.shadowOos}))}</pre></div>`:'';
+ showModal(`<h3>${esc(r.venue)} ${r.raceNo}R 詳細</h3><div class="raceMeta">${r.date} ${esc(r.startTime||'--:--')} ${esc(r.timeBand||'')}</div>${r.line?`<p class="note">場グループ：${esc(r.bankGroup||bankGroupOf(r.venue)||'未分類')}<br>ライン：${esc(r.line)}${r.threeOrder?`<br>3車ライン印：${esc(r.threeOrder)}`:''}</p>`:''}${cards}${shadow}${r.predictionUrl?`<div class="actions"><a class="btn primary" href="${esc(r.predictionUrl)}" target="_blank" rel="noopener">WINTICKETで見る</a></div>`:''}<div class="modalBtns"><button class="btn primary" onclick="SMART_SELECT.closeModal()">閉じる</button></div>`);
+}
+
 function showModal(html){document.getElementById('modal').innerHTML=html;document.getElementById('modalWrap').classList.add('show')}function closeModal(){document.getElementById('modalWrap').classList.remove('show')}
 function restoreSetting(index){const h=state.settingHistory[index];if(!h)return;showModal(`<h3>前の設定へ戻しますか？</h3><p class="note">${Object.keys(h.value).filter(k=>h.value[k]).map(k=>candidateDefs[k]?.name||k).join(' / ')}</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" onclick="SMART_SELECT.confirmRestore(${index})">復元</button></div>`)}function confirmRestore(index){const h=state.settingHistory[index];if(!h)return;state.settingHistory.push({at:new Date().toISOString(),value:{...state.candidates},reason:'復元前'});state.settingHistory=state.settingHistory.slice(-3);state.candidates={...h.value};draftCandidates={...state.candidates};save();closeModal();toast('設定を復元しました')}
 
