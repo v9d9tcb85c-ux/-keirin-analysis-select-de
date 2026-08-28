@@ -1042,6 +1042,112 @@ body::after{
   .commandHero>.heroGrid{display:block!important}
 }
 
+
+/* =========================================================
+   v3.13.5 CAPITAL TREND — display only
+   Uses existing state.capital. No purchase / payout logic changed.
+   ========================================================= */
+.capitalTrendPanel{
+  margin-top:12px;
+  padding:12px 13px 10px;
+  border:1px solid rgba(93,141,186,.20);
+  border-radius:12px;
+  background:linear-gradient(180deg,rgba(8,23,36,.92),rgba(5,15,25,.96));
+  overflow:hidden;
+}
+.capitalTrendHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:7px;
+}
+.capitalTrendHead h3{
+  margin:1px 0 0;
+  font-size:14px;
+  letter-spacing:.04em;
+}
+.capitalTrendSummary{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.capitalTrendPill{
+  padding:5px 8px;
+  border-radius:999px;
+  border:1px solid rgba(91,145,198,.22);
+  background:rgba(15,36,53,.78);
+  color:#b9c8d6;
+  font-size:9px;
+  white-space:nowrap;
+}
+.capitalTrendPill b{color:#f2f7fb;font-size:10px}
+.capitalTrendChart{
+  position:relative;
+  height:180px;
+  border-radius:10px;
+  overflow:hidden;
+  background:
+    linear-gradient(to right,rgba(107,139,167,.07) 1px,transparent 1px) 0 0/25% 100%,
+    linear-gradient(to bottom,rgba(107,139,167,.07) 1px,transparent 1px) 0 0/100% 25%,
+    linear-gradient(180deg,rgba(5,17,28,.92),rgba(3,11,19,.96));
+}
+.capitalTrendSvg{display:block;width:100%;height:100%}
+.capitalTrendLine{
+  fill:none;
+  stroke:#55a8ff;
+  stroke-width:3;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  filter:drop-shadow(0 0 5px rgba(76,154,255,.42));
+}
+.capitalTrendArea{fill:url(#capitalTrendAreaFill)}
+.capitalTrendBase{
+  stroke:rgba(239,201,106,.72);
+  stroke-width:1.3;
+  stroke-dasharray:5 5;
+}
+.capitalTrendDot{
+  fill:#dceeff;
+  stroke:#3182f6;
+  stroke-width:2;
+}
+.capitalTrendNow{
+  fill:#7dd7aa;
+  stroke:#dfffee;
+  stroke-width:2;
+  filter:drop-shadow(0 0 5px rgba(91,220,161,.52));
+}
+.capitalTrendAxisText{
+  fill:#7f93a6;
+  font-size:9px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic UI",sans-serif;
+}
+.capitalTrendFoot{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:7px;
+  color:#8194a6;
+  font-size:9px;
+}
+.capitalTrendEmpty{
+  height:100%;
+  display:grid;
+  place-items:center;
+  color:#8194a6;
+  font-size:11px;
+}
+@media(max-width:680px){
+  .capitalTrendPanel{padding:10px;margin-top:9px}
+  .capitalTrendHead{display:block}
+  .capitalTrendSummary{justify-content:flex-start;margin-top:7px}
+  .capitalTrendChart{height:145px}
+  .capitalTrendPill{font-size:8px;padding:4px 6px}
+  .capitalTrendFoot{font-size:8px;flex-wrap:wrap}
+}
+
 </style>
 </head>
 <body>
@@ -1108,6 +1214,17 @@ body::after{
       <div class="dashPanel operationOverview">
         <div class="dashPanelHead"><div><div class="eyebrow">SMART FINDER OPERATION LEDGER</div><h2>運用 <span class="dotTrail">•••</span></h2></div><div class="dashHint">実際の購入だけを<br>資金へ反映</div></div>
         <div class="kpis dashboardKpis" id="homeKpis"></div>
+        <div class="capitalTrendPanel">
+          <div class="capitalTrendHead">
+            <div>
+              <div class="eyebrow">CAPITAL TREND</div>
+              <h3>資金推移</h3>
+            </div>
+            <div class="capitalTrendSummary" id="capitalTrendSummary"></div>
+          </div>
+          <div class="capitalTrendChart" id="capitalTrendChart"></div>
+          <div class="capitalTrendFoot" id="capitalTrendFoot"></div>
+        </div>
       </div>
 
       <div class="dashPanel todayBoardPanel">
@@ -1385,6 +1502,63 @@ function nextTargetHtml(r){
  const action=r.status==='投票待ち'?`<button class="btn primary" onclick="SMART_SELECT.markBet('${esc(r.key)}')">購入登録</button>`:r.status==='結果待ち'?`<button class="btn save" onclick="SMART_SELECT.openResult('${esc(r.key)}')">結果を入力</button>`:'';
  return `<div class="nextTargetCard"><div class="nextVenue"><span>${esc(r.venue)}</span><b>${esc(r.raceNo)}R</b></div><div class="nextBody"><div class="nextMetaLine"><span>▣ ${esc(r.date)}</span><span>${esc(r.grade||'—')}</span><span>${esc(r.timeBand||'—')}</span><span>${esc(r.line||'—')}</span></div><div class="nextInfoLine"><div class="nextTags">${tags}${statusBadge(r.status)}</div><div class="nextMetric"><small>1点金額</small><b>${yen(unit)}</b></div><div class="nextMetric"><small>点数</small><b>${pts}点</b></div><div class="nextMetric"><small>払戻</small><b>${r.payout!=null?yen(r.payout):'—'}</b></div></div></div><div class="nextActions">${action}<button class="btn" onclick="SMART_SELECT.openDetail('${esc(r.key)}')">詳細</button><span class="nextInvestment">${yen(inv)}<small>予定/確定投資</small></span></div></div>`;
 }
+
+function renderCapitalTrend(){
+ const host=document.getElementById('capitalTrendChart');
+ const sum=document.getElementById('capitalTrendSummary');
+ const foot=document.getElementById('capitalTrendFoot');
+ if(!host||!sum||!foot)return;
+ const raw=Array.isArray(state.capital)?state.capital:[];
+ const pts=raw.map((x,i)=>({i,value:Number(x.value)||0,at:x.at||'',type:x.type||''}));
+ if(!pts.length){
+   host.innerHTML='<div class="capitalTrendEmpty">資金履歴はまだありません。</div>';
+   sum.innerHTML='';
+   foot.textContent='';
+   return;
+ }
+ const values=pts.map(x=>x.value);
+ const start=Number(state.startFunds)||values[0]||0;
+ const current=Number(state.currentFunds)||values[values.length-1]||0;
+ const hi=Math.max(...values),lo=Math.min(...values);
+ const pnl=current-start;
+ sum.innerHTML=[
+   `<span class="capitalTrendPill">開始 <b>${yen(start)}</b></span>`,
+   `<span class="capitalTrendPill">現在 <b>${yen(current)}</b></span>`,
+   `<span class="capitalTrendPill">最高 <b>${yen(hi)}</b></span>`,
+   `<span class="capitalTrendPill">最低 <b>${yen(lo)}</b></span>`
+ ].join('');
+ const W=900,H=180,pL=48,pR=18,pT=15,pB=23;
+ let minV=Math.min(lo,start),maxV=Math.max(hi,start);
+ let span=Math.max(1,maxV-minV);
+ const pad=Math.max(500,span*.14);
+ minV=Math.max(0,minV-pad);maxV=maxV+pad;span=Math.max(1,maxV-minV);
+ const x=i=>pts.length===1?pL+(W-pL-pR)/2:pL+i*(W-pL-pR)/(pts.length-1);
+ const y=v=>pT+(maxV-v)*(H-pT-pB)/span;
+ const coords=pts.map((p,i)=>[x(i),y(p.value)]);
+ const line=coords.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+ const area=line+` L ${coords[coords.length-1][0].toFixed(1)} ${(H-pB).toFixed(1)} L ${coords[0][0].toFixed(1)} ${(H-pB).toFixed(1)} Z`;
+ const baseY=y(start);
+ const yTicks=[maxV,(maxV+minV)/2,minV];
+ const dots=coords.map((p,i)=>{
+   const c=i===coords.length-1?'capitalTrendNow':'capitalTrendDot';
+   const title=`${pts[i].type||'資金'}：${yen(pts[i].value)}`;
+   return `<circle class="${c}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${i===coords.length-1?4.7:3.1}"><title>${esc(title)}</title></circle>`;
+ }).join('');
+ const tickText=yTicks.map(v=>`<text class="capitalTrendAxisText" x="4" y="${(y(v)+3).toFixed(1)}">${Math.round(v/1000).toLocaleString('ja-JP')}k</text>`).join('');
+ host.innerHTML=`<svg class="capitalTrendSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="資金推移グラフ">
+   <defs><linearGradient id="capitalTrendAreaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3f91ed" stop-opacity=".30"/><stop offset="100%" stop-color="#3f91ed" stop-opacity=".015"/></linearGradient></defs>
+   ${tickText}
+   <line class="capitalTrendBase" x1="${pL}" y1="${baseY.toFixed(1)}" x2="${W-pR}" y2="${baseY.toFixed(1)}"/>
+   <path class="capitalTrendArea" d="${area}"/>
+   <path class="capitalTrendLine" d="${line}"/>
+   ${dots}
+ </svg>`;
+ const last=pts[pts.length-1];
+ const firstAt=pts[0]?.at?new Date(pts[0].at).toLocaleDateString('ja-JP'):'開始';
+ const lastAt=last?.at?new Date(last.at).toLocaleDateString('ja-JP'):'現在';
+ foot.innerHTML=`<span>${esc(firstAt)} → ${esc(lastAt)}　${pts.length}ポイント</span><span class="${pnl>=0?'profit':'loss'}">開始比 ${pnl>=0?'+':''}${yen(pnl)}</span>`;
+}
+
 function renderHome(){
  const todayAll=state.races.filter(r=>r.date===todayStr());
  const activeToday=todayAll.filter(r=>!['的中','不的中'].includes(r.status));
@@ -1397,7 +1571,7 @@ function renderHome(){
  if(boardTitle)boardTitle.textContent='本日の対象';
  document.getElementById('todayCountBadge').textContent=`${sortedAll.length}件`;
  document.getElementById('todayRaces').innerHTML=sortedAll.length?sortedAll.map((r,i)=>raceHtml(r,false,i)).join(''):'<div class="empty">対象なし</div>';
- const vals=state.capital.map(x=>x.value), max=Math.max(...vals,1), min=Math.min(...vals,0);document.getElementById('capitalChart').innerHTML=vals.slice(-24).map(v=>`<div class="bar" style="height:${Math.max(4,((v-min)/(max-min||1))*100)}%" title="${yen(v)}"></div>`).join('');document.getElementById('capitalNote').textContent=`最低 ${yen(Math.min(...vals))} / 最高 ${yen(Math.max(...vals))} / 現在 ${yen(state.currentFunds)}`;
+ const vals=state.capital.map(x=>x.value), max=Math.max(...vals,1), min=Math.min(...vals,0);document.getElementById('capitalChart').innerHTML=vals.slice(-24).map(v=>`<div class="bar" style="height:${Math.max(4,((v-min)/(max-min||1))*100)}%" title="${yen(v)}"></div>`).join('');document.getElementById('capitalNote').textContent=`最低 ${yen(Math.min(...vals))} / 最高 ${yen(Math.max(...vals))} / 現在 ${yen(state.currentFunds)}`;renderCapitalTrend();
 }
 function raceHtml(r,isNext,accentIndex=0){
  const pts=racePoints(r),unit=r.investmentConfirmed!=null?r.unitConfirmed:unitForRace(r,state.currentFunds),tags=(r.candidates||[]).map(c=>candTag(c.id)).join(''),accent=['blue','green','gold'][Math.abs(Number(accentIndex)||0)%3];
