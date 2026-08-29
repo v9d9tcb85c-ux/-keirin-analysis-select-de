@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.14.1 CAPITAL TREND PROFIT FIX</title>
+<title>WINTICKET SMART FINDER SELECT / v3.14.2 AI UNPUBLISHED MONITOR</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -704,7 +704,7 @@ button,input,select,textarea,.tab{position:relative;z-index:3}
 
 /* v3.0 safe-add: visual process board only. Existing SELECT acquisition is unchanged. */
 
-.sfHealthGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:10px 0 14px}
+.sfHealthGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:10px 0 14px}
 .sfHealthCard{padding:11px 12px;border:1px solid rgba(73,143,224,.28);border-radius:13px;background:linear-gradient(180deg,rgba(7,18,42,.92),rgba(4,10,27,.95));min-width:0}
 .sfHealthCard small{display:block;color:#7f96bb;font-size:9px;letter-spacing:.08em;margin-bottom:5px}
 .sfHealthCard b{display:block;color:#edf6ff;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1257,6 +1257,7 @@ body::after{
       <div class="sfHealthCard" id="sfHealthAgent"><small>PC AGENT</small><b id="sfHealthAgentValue">確認中</b><span id="sfHealthAgentNote">接続状態</span></div>
       <div class="sfHealthCard"><small>対象開催場</small><b id="sfHealthVenueValue">—</b><span>今回取得した開催場</span></div>
       <div class="sfHealthCard"><small>確認レース</small><b id="sfHealthRaceValue">—</b><span>APIから取得できた範囲</span></div>
+      <div class="sfHealthCard" id="sfHealthAi"><small>AI未公開</small><b id="sfHealthAiValue">—</b><span id="sfHealthAiNote">公開状況を確認します</span></div>
       <div class="sfHealthCard"><small>最終候補</small><b id="sfHealthMatchValue">—</b><span id="sfHealthErrorCount">エラー 0件</span></div>
     </section>
 
@@ -1882,9 +1883,68 @@ function sfCounter(st,...names){
  }
  return null;
 }
+function sfObjNumber(obj,...names){
+ for(const n of names){
+   const v=obj?.[n];
+   if(v!==undefined&&v!==null&&v!==''&&!Number.isNaN(Number(v)))return Number(v);
+ }
+ return null;
+}
+function sfObjBool(obj,...names){
+ for(const n of names){
+   const v=obj?.[n];
+   if(typeof v==='boolean')return v;
+ }
+ return null;
+}
+function sfAiUnpublishedSummary(st){
+ let raceCount=sfCounter(st,
+   'ai_unpublished_count','ai_unpublished','unpublished_count','ai_pending_count',
+   'pending_ai_count','not_ready_count','pending_count','unpublished'
+ );
+ if(raceCount===null){
+   for(const key of ['ai_unpublished_list','ai_unpublished','unpublished','pending_ai','pending_list','not_ready']){
+     if(Array.isArray(st?.[key])){raceCount=st[key].length;break}
+   }
+ }
+ const venues=Array.isArray(st?.venues_info)?st.venues_info:[];
+ let publishedVenues=0,unpublishedVenues=0,explicitVenues=0,venueRaceUnpub=0,venueRaceKnown=false;
+ for(const v of venues){
+   let published=sfObjBool(v,'ai_ready','ai_published','ai_public','published','ready');
+   if(published===null){
+     let unpublished=sfObjBool(v,'ai_unpublished','not_ready','pending','ai_pending');
+     if(unpublished!==null)published=!unpublished;
+   }
+   if(published===null){
+     const statusBlob=[
+       v?.ai_status,v?.aiState,v?.status,v?.phase,v?.message,v?.detail,v?.note
+     ].filter(Boolean).join(' / ');
+     if(statusBlob){
+       if(/未公開|pending|not.?published|未発表|準備中|公開待ち/i.test(statusBlob))published=false;
+       else if(/公開|ready|available|完了/i.test(statusBlob))published=true;
+     }
+   }
+   if(published===true){publishedVenues++;explicitVenues++}
+   else if(published===false){unpublishedVenues++;explicitVenues++}
+   const perVenue=sfObjNumber(v,
+     'ai_unpublished_count','unpublished_count','pending_ai_count','not_ready_count','pending_count'
+   );
+   if(perVenue!==null){venueRaceUnpub+=perVenue;venueRaceKnown=true}
+ }
+ if(raceCount===null && venueRaceKnown)raceCount=venueRaceUnpub;
+ return {raceCount,publishedVenues,unpublishedVenues,explicitVenues,totalVenues:venues.length};
+}
+function aiUnpublishedLabel(st){
+ const a=sfAiUnpublishedSummary(st);
+ if(a.raceCount!==null)return `AI未公開 ${a.raceCount}件`;
+ if(a.explicitVenues)return `AI未公開 ${a.unpublishedVenues}場`;
+ return '';
+}
 function updateOperationalMonitor(st){
  const agent=document.getElementById('sfHealthAgent'),av=document.getElementById('sfHealthAgentValue'),an=document.getElementById('sfHealthAgentNote');
- const vv=document.getElementById('sfHealthVenueValue'),rv=document.getElementById('sfHealthRaceValue'),mv=document.getElementById('sfHealthMatchValue'),ec=document.getElementById('sfHealthErrorCount');
+ const vv=document.getElementById('sfHealthVenueValue'),rv=document.getElementById('sfHealthRaceValue');
+ const aiCard=document.getElementById('sfHealthAi'),aiv=document.getElementById('sfHealthAiValue'),ain=document.getElementById('sfHealthAiNote');
+ const mv=document.getElementById('sfHealthMatchValue'),ec=document.getElementById('sfHealthErrorCount');
  const banner=document.getElementById('sfErrorBanner'),title=document.getElementById('sfErrorTitle'),msg=document.getElementById('sfErrorMessage');
  if(!agent||!av||!an||!vv||!rv||!mv||!ec||!banner||!title||!msg)return;
 
@@ -1899,6 +1959,21 @@ function updateOperationalMonitor(st){
  const checked=sfCounter(st,'checked_races','race_done','done_races');
  const total=sfCounter(st,'race_total','total_races');
  rv.textContent=checked!==null?(total!==null?`${checked}/${total}R`:`${checked}R`):(total!==null?`${total}R`:'—');
+
+ const ai=sfAiUnpublishedSummary(st);
+ if(aiCard&&aiv&&ain){
+   if(ai.raceCount!==null)aiv.textContent=`${ai.raceCount}件`;
+   else if(ai.explicitVenues)aiv.textContent=`${ai.unpublishedVenues}場`;
+   else aiv.textContent='—';
+   if(ai.explicitVenues){
+     ain.textContent=`公開 ${ai.publishedVenues}場 / 未公開 ${ai.unpublishedVenues}場`;
+   }else if(ai.raceCount!==null){
+     ain.textContent='AI予想未公開としてカウント';
+   }else{
+     ain.textContent='公開状況データ待ち';
+   }
+   aiCard.className='sfHealthCard '+((ai.raceCount||ai.unpublishedVenues)?'warn':'ok');
+ }
 
  const matches=Array.isArray(st?.matches)?st.matches.length:0;
  mv.textContent=`${matches}件`;
@@ -1928,9 +2003,9 @@ function updateProcessBoard(st,override=''){
  const phase=String(st?.phase||'').toLowerCase(),running=!!st?.running;
  const total=Number(st?.race_total||st?.total_races||0),done=Number(st?.race_done||st?.checked_races||0);
  let pct=total?Math.min(100,Math.round(done/total*100)):0;
- if(!running&&phase==='done'){[1,2,3,4].forEach(n=>setProcessStep(n,'done'));pct=100;title.textContent='検索・照合が完了しました';detail.textContent=override||`確認 ${done||total||0}R｜利益候補 ${(st?.matches||[]).length}件`;count.textContent=`${(st?.matches||[]).length}候補`;bar.style.width='100%';return}
+ if(!running&&phase==='done'){[1,2,3,4].forEach(n=>setProcessStep(n,'done'));pct=100;title.textContent='検索・照合が完了しました';const aiTxt=aiUnpublishedLabel(st);detail.textContent=override||`確認 ${done||total||0}R｜利益候補 ${(st?.matches||[]).length}件${aiTxt?`｜${aiTxt}`:''}`;count.textContent=`${(st?.matches||[]).length}候補`;bar.style.width='100%';return}
  if(phase.includes('board')||phase.includes('venue')||phase.includes('load')){setProcessStep(1,'active');title.textContent='開催場を取得中';detail.textContent=override||'今日の開催場を、既存SELECTで実績のある取得方法で確認しています。';count.textContent='開催場確認';pct=Math.max(pct,8)}
- else if(running){setProcessStep(1,'done');setProcessStep(2,'active');title.textContent='対象レースを確認中';detail.textContent=override||`${st?.current_venue||''} ${st?.current_race?st.current_race+'R':''}｜F2・ガールズ除外・AI公開・星2を確認中`;count.textContent=total?`${done} / ${total}R`:`${done}R`;pct=Math.max(pct,18)}
+ else if(running){setProcessStep(1,'done');setProcessStep(2,'active');title.textContent='対象レースを確認中';const aiTxt=aiUnpublishedLabel(st);detail.textContent=override||`${st?.current_venue||''} ${st?.current_race?st.current_race+'R':''}｜F2・ガールズ除外・AI公開・星2を確認中${aiTxt?`｜${aiTxt}`:''}`;count.textContent=total?`${done} / ${total}R`:`${done}R`;pct=Math.max(pct,18)}
  else {title.textContent='検索待機中';detail.textContent=override||'検索を開始すると、現在の処理内容と進み具合を表示します。';count.textContent='--'}
  // If matches already exist while running, show that rule matching is progressing after extraction.
  if(running&&(st?.matches||[]).length){setProcessStep(2,'done');setProcessStep(3,'active');title.textContent='利益ルールと照合中';detail.textContent=override||`星2候補を全場ルール → 場グループ補正の順で照合しています。現在 ${(st.matches||[]).length}件`;pct=Math.max(pct,72)}
@@ -1968,7 +2043,7 @@ async function syncFromSmartFinder(){
   const rr=receive(matches,{silent:true});
   state.sync=state.sync||{};state.sync.imported=(state.sync.imported||0)+rr.added;state.sync.lastAt=new Date().toISOString();state.sync.lastPhase=st.phase||'';state.sync.lastError='';localStorage.setItem(storageKey(),JSON.stringify(state));
   const phase=st.running?'検索中':st.phase==='done'?'検索完了':st.phase==='error'?'エラー':'待機';
-  setSfUi(st,`${phase}｜検出 ${matches.length}件｜新規 ${rr.added}件${removed?`｜前回候補整理 ${removed}件`:''}${rr.skipped?`｜SELECT除外 ${rr.skipped}件`:''}`);
+  const aiTxt=aiUnpublishedLabel(st); setSfUi(st,`${phase}｜検出 ${matches.length}件｜新規 ${rr.added}件${removed?`｜前回候補整理 ${removed}件`:''}${rr.skipped?`｜SELECT除外 ${rr.skipped}件`:''}${aiTxt?`｜${aiTxt}`:''}`);
  }catch(e){state.sync=state.sync||{};state.sync.lastError=String(e);const link=document.getElementById('sfLinkState');if(link){link.textContent='再接続中';link.className='linkState offline'}const d=document.getElementById('sfSyncDetail');if(d)d.textContent='通信確認を自動再試行しています。前回の完了結果はそのまま残します。';updateProcessBoard({running:false,phase:'reconnect'},'通信確認を自動再試行しています。前回の完了結果は消しません。');}
 }
 async function startSmartFinder(){
