@@ -1300,16 +1300,6 @@ body::after{
       <p class="note">現在資金は投票・払戻の確定で自動更新し、直接変更しません。初期運用は30,000円開始。現在資金に応じて500 / 700 / 1,000 / 1,500 / 2,000円/点へ自動で上下し、90,000円以上は2,000円/点を上限とします。</p>
       <button class="btn save" id="saveMoney" style="display:none;width:100%">資金設定を保存</button>
     </div></section>
-    <section class="section"><div class="sectionHead"><h3><span>ADDITIONAL FUNDS</span> 追加資金</h3></div><div class="settingsCard">
-      <p class="note">運用開始後の開始資金は変更せず、追加で入れた資金を別履歴として現在資金へ加算します。追加資金は利益には含めません。購入額・払戻を後から修正しても再計算時に残ります。</p>
-      <div class="formRow">
-        <div class="field"><label>追加する金額</label><input id="additionalFundsAmount" type="number" min="100" step="100" inputmode="numeric" placeholder="例：10000"></div>
-        <div class="field"><label>メモ（任意）</label><input id="additionalFundsNote" type="text" maxlength="80" placeholder="例：追加運用資金"></div>
-      </div>
-      <button class="btn primary" id="addFundsBtn" style="width:100%">追加資金を入れる</button>
-      <div class="note" id="additionalFundsSummary" style="margin-top:10px"></div>
-      <div id="additionalFundsHistory" class="historyList" style="margin-top:8px"></div>
-    </div></section>
     <section class="section"><div class="sectionHead"><h3><span>SAFE TEST</span> 購入登録の確認モード</h3></div><div class="settingsCard">
       <p class="note">本番データとは別の保存領域で、テスト用レース3件を使って「購入登録 → 運用へ追加 → 結果入力 → 損益反映 → 再計算」を確認できます。テスト中はSMART FINDERの自動取込を停止します。</p>
       <div class="actions"><button class="btn primary" id="testModeBtn">安全テストモードを開始</button><button class="btn danger" id="clearTestBtn">テストデータを消去</button></div>
@@ -1424,7 +1414,7 @@ function enrichCandidateStats(c,race){
 }
 function enrichRaceCandidates(r){if(!r)return r;r.candidates=(r.candidates||[]).map(c=>enrichCandidateStats(c,r));return r}
 
-const initial=()=>({version:8,startFunds:30000,currentFunds:30000,candidates:{"ALL-001":true,"ALL-002":true,"ALL-003":true,"ALL-004":true,"ALL-005":true,"ALL-006":true,"ALL-007":true,"ALL-008":true,"ALL-009":true,"ALL-010":true,"OTH-001":true,"OTH-002":true,"OTH-003":true,"OTH-004":true,"OTH-005":true,"OTH-006":true,"OTH-007":true,"OTH-008":true,"OTH-009":true,"OTH-010":true,"OTH-011":true,"OTH-012":true,"OTH-013":true,"OTH-014":true,"OTH-015":true,"OTH-016":true,"OTH-017":true},settingHistory:[],moneyHistory:[],fundingHistory:[],races:[],capital:[{at:new Date().toISOString(),value:30000,type:'開始'}],sync:{imported:0,lastAt:null,lastPhase:'',lastError:''}});
+const initial=()=>({version:7,startFunds:30000,currentFunds:30000,candidates:{"ALL-001":true,"ALL-002":true,"ALL-003":true,"ALL-004":true,"ALL-005":true,"ALL-006":true,"ALL-007":true,"ALL-008":true,"ALL-009":true,"ALL-010":true,"OTH-001":true,"OTH-002":true,"OTH-003":true,"OTH-004":true,"OTH-005":true,"OTH-006":true,"OTH-007":true,"OTH-008":true,"OTH-009":true,"OTH-010":true,"OTH-011":true,"OTH-012":true,"OTH-013":true,"OTH-014":true,"OTH-015":true,"OTH-016":true,"OTH-017":true},settingHistory:[],moneyHistory:[],races:[],capital:[{at:new Date().toISOString(),value:30000,type:'開始'}],sync:{imported:0,lastAt:null,lastPhase:'',lastError:''}});
 let state=load(), editMode=false, draftCandidates={...state.candidates}, moneyEdit=false;
 function normalizeLoaded(raw){
  const base=initial(), merged={...base,...(raw&&typeof raw==='object'?raw:{})};
@@ -1432,9 +1422,9 @@ function normalizeLoaded(raw){
  const savedCandidates=(raw&&raw.candidates)||{};
  Object.keys(base.candidates).forEach(k=>{if(Object.prototype.hasOwnProperty.call(savedCandidates,k))merged.candidates[k]=!!savedCandidates[k]});
  merged.sync={...base.sync,...((raw&&raw.sync)||{})};
- merged.races=Array.isArray(merged.races)?merged.races:[]; merged.fundingHistory=Array.isArray(merged.fundingHistory)?merged.fundingHistory:[];
+ merged.races=Array.isArray(merged.races)?merged.races:[];
  merged.capital=Array.isArray(merged.capital)&&merged.capital.length?merged.capital:base.capital;
- merged.version=8;
+ merged.version=7;
  merged.races.forEach(r=>{
   if(!r.grade)r.grade=r.classGrade||'';
   if(r.investmentConfirmed==null && (r.status||'投票待ち')==='投票待ち'){
@@ -1514,8 +1504,7 @@ function plannedInvestment(r){return r.investmentConfirmed!=null?r.investmentCon
 function settled(){return state.races.filter(r=>['的中','不的中'].includes(r.status))}
 function investedTotal(){return settled().reduce((s,r)=>s+(r.investmentConfirmed||0),0)}
 function payoutTotal(){return settled().reduce((s,r)=>s+(r.payout||0),0)}
-function totalAddedFunds(){return (state.fundingHistory||[]).reduce((s,x)=>s+Math.max(0,Number(x.amount)||0),0)}
-function profitTotal(){return state.currentFunds-state.startFunds-totalAddedFunds()}
+function profitTotal(){return state.currentFunds-state.startFunds}
 function hitCount(){return settled().filter(r=>r.status==='的中').length}
 function purchased(){return state.races.filter(r=>r.status!=='投票待ち' && r.investmentConfirmed!=null)}
 function purchasedTotal(){return purchased().reduce((s,r)=>s+(Number(r.investmentConfirmed)||0),0)}
@@ -1524,20 +1513,9 @@ function raceBets(r){return Array.isArray(r.manualBets)&&r.manualBets.length?r.m
 function operationSort(a,b){return `${a.betAt||a.date||''}${a.startTime||''}${a.key||''}`.localeCompare(`${b.betAt||b.date||''}${b.startTime||''}${b.key||''}`)}
 function recalculateOperations(){
  const list=[...purchased()].sort(operationSort);
- const funding=[...(state.fundingHistory||[])].filter(x=>Number(x.amount)>0).sort((a,b)=>String(a.at||'').localeCompare(String(b.at||'')));
  let running=Number(state.startFunds)||0;
- let addedApplied=0,fi=0;
  const cap=[{at:new Date().toISOString(),value:running,type:'開始/再計算'}];
- const applyFundingUntil=(at)=>{
-   const limit=String(at||'9999');
-   while(fi<funding.length && String(funding[fi].at||'')<=limit){
-     const f=funding[fi++],amt=Math.max(0,Number(f.amount)||0);
-     running+=amt;addedApplied+=amt;
-     cap.push({at:f.at||new Date().toISOString(),value:running,type:`追加資金 +${yen(amt)}`});
-   }
- };
  for(const r of list){
-   applyFundingUntil(r.betAt||r.date||'');
    const inv=Math.max(0,Number(r.investmentConfirmed)||0);
    r.fundsBeforePurchase=running;
    running-=inv;
@@ -1548,19 +1526,19 @@ function recalculateOperations(){
      running+=pay;
      r.raceProfit=pay-inv;
      r.fundsAfterSettlement=running;
-     r.cumulativeProfitAfter=running-(Number(state.startFunds)||0)-addedApplied;
+     r.cumulativeProfitAfter=running-(Number(state.startFunds)||0);
      cap.push({at:r.settledAt||r.betAt||new Date().toISOString(),value:running,type:`払戻 ${r.venue}${r.raceNo}R`});
    }else{
      r.raceProfit=null;
      r.fundsAfterSettlement=null;
-     r.cumulativeProfitAfter=running-(Number(state.startFunds)||0)-addedApplied;
+     r.cumulativeProfitAfter=running-(Number(state.startFunds)||0);
    }
  }
- applyFundingUntil('9999');
  state.currentFunds=running;
  state.capital=cap;
  return running;
 }
+
 
 function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1800)}
 function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
@@ -1689,7 +1667,7 @@ function renderOperation(){
 function renderHistory(){const list=[...state.races].sort((a,b)=>`${b.date}${b.startTime||''}`.localeCompare(`${a.date}${a.startTime||''}`));document.getElementById('allHistory').innerHTML=list.length?list.map(r=>raceHtml(r,false)).join(''):'<div class="empty">履歴なし</div>'}
 function renderStats(){const s=settled(),inv=investedTotal(),pay=payoutTotal(),roi=inv?pay/inv*100:0,hit=s.length?hitCount()/s.length*100:0;document.getElementById('statsKpis').innerHTML=[['確定レース',s.length+'R',''],['的中',hitCount()+'R',pct(hit)],['累計収支',`${profitTotal()>=0?'+':''}${yen(profitTotal())}`,''],['回収率',pct(roi),`払戻 ${yen(pay)}`]].map((x,i)=>`<div class="kpi"><div class="lab">${x[0]}</div><div class="val ${i===2?(profitTotal()>=0?'profit':'loss'):''}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
  document.getElementById('candidateStats').innerHTML=Object.keys(candidateDefs).map(id=>{const races=s.filter(r=>(r.candidates||[]).some(c=>c.id===id));let iv=0,pv=0,h=0;races.forEach(r=>{const c=(r.candidates||[]).find(x=>x.id===id);const totalPts=racePoints(r);const cp=Number(c?.points)||c?.bets?.length||1;const share=totalPts?cp/totalPts:0;iv+=(r.investmentConfirmed||0)*share;pv+=(r.payout||0)*share;if(r.status==='的中')h++});return `<div class="historyCard"><strong>${candidateDefs[id].name}</strong>　${races.length}R / 的中 ${h}R<br>参考投資 ${yen(iv)}　参考払戻 ${yen(pv)}　参考回収率 ${pct(iv?pv/iv*100:0)}</div>`}).join('')}
-function renderSettings(){document.getElementById('startFunds').value=String(state.startFunds);document.getElementById('currentFunds').value=state.currentFunds;document.getElementById('startFunds').disabled=!moneyEdit;document.getElementById('moneyLockState').textContent=moneyEdit?'🔓 資金設定変更中':'🔒 資金設定ロック中';document.getElementById('saveMoney').style.display=moneyEdit?'block':'none';const b=document.getElementById('testModeBtn'),s=document.getElementById('testModeState'),banner=document.getElementById('testBanner');if(b)b.textContent=testMode?'本番モードへ戻る':'安全テストモードを開始';if(s){const pc=purchased().length,sc=settled().length;s.innerHTML=testMode?`<b>テスト中</b>｜3件のテストレースで再計算確認。購入 ${pc}件 / 確定 ${sc}件。本番の購入・払戻・資金には反映されません。`:'本番モードです。テストを始めても現在の本番データは変更しません。'}if(banner)banner.classList.toggle('show',testMode);const fs=document.getElementById('additionalFundsSummary'),fh=document.getElementById('additionalFundsHistory');if(fs)fs.innerHTML=`追加資金累計：<b>${yen(totalAddedFunds())}</b>　｜　開始資金：${yen(state.startFunds)}　｜　現在資金：${yen(state.currentFunds)}`;if(fh){const arr=[...(state.fundingHistory||[])].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))).slice(0,8);fh.innerHTML=arr.length?arr.map(x=>`<div class="historyCard" style="padding:9px 11px"><div style="display:flex;justify-content:space-between;gap:8px"><b>+${yen(x.amount)}</b><span class="note">${esc(x.at?new Date(x.at).toLocaleString('ja-JP'):'')}</span></div>${x.note?`<div class="note" style="margin-top:4px">${esc(x.note)}</div>`:''}</div>`).join(''):'<div class="note">追加資金の履歴はまだありません。</div>';}}
+function renderSettings(){document.getElementById('startFunds').value=String(state.startFunds);document.getElementById('currentFunds').value=state.currentFunds;document.getElementById('startFunds').disabled=!moneyEdit;document.getElementById('moneyLockState').textContent=moneyEdit?'🔓 資金設定変更中':'🔒 資金設定ロック中';document.getElementById('saveMoney').style.display=moneyEdit?'block':'none';const b=document.getElementById('testModeBtn'),s=document.getElementById('testModeState'),banner=document.getElementById('testBanner');if(b)b.textContent=testMode?'本番モードへ戻る':'安全テストモードを開始';if(s){const pc=purchased().length,sc=settled().length;s.innerHTML=testMode?`<b>テスト中</b>｜3件のテストレースで再計算確認。購入 ${pc}件 / 確定 ${sc}件。本番の購入・払戻・資金には反映されません。`:'本番モードです。テストを始めても現在の本番データは変更しません。'}if(banner)banner.classList.toggle('show',testMode)}
 function renderAll(){renderHome();renderCandidates();renderOperation();renderHistory();renderStats();renderSettings()}
 function receive(races,options={}){if(!Array.isArray(races))races=[races];let added=0,merged=0,skipped=0;for(const raw of races){if(!raw||!raw.date||!raw.venue||raw.raceNo==null)continue;const key=keyOf(raw);let r=state.races.find(x=>x.key===key);const incoming=(raw.candidates||[]).filter(c=>state.candidates[c.id]!==false).map(c=>enrichCandidateStats({...c,id:c.id||c.ruleId||c.rule_id,points:Number(c.points)||((c.bets||[]).length)||1,bets:c.bets||candidateDefs[c.id]?.bets||[]},raw));if(!incoming.length){skipped++;continue}if(!r){r={key,date:raw.date,venue:raw.venue,raceNo:Number(raw.raceNo),grade:raw.grade||raw.classGrade||'',startTime:raw.startTime||'',timeBand:raw.timeBand||'',candidates:[],status:'投票待ち',createdAt:new Date().toISOString(),source:raw.source||'',line:raw.line||'',threeOrder:raw.threeOrder||'',bankGroup:raw.bankGroup||bankGroupOf(raw.venue),predictionUrl:raw.predictionUrl||'',shadowOos:raw.shadowOos||[]};state.races.push(r);added++}else merged++;for(const c of incoming){const ex=r.candidates.find(x=>x.id===c.id);if(!ex)r.candidates.push(c);else{Object.assign(ex,c);ex.bets=[...new Set([...(ex.bets||[]),...(c.bets||[])])];ex.points=Math.max(ex.points||0,c.points||0)}}r.shadowOos=raw.shadowOos||r.shadowOos||[];r.startTime=raw.startTime||r.startTime;r.timeBand=raw.timeBand||r.timeBand;r.grade=raw.grade||raw.classGrade||r.grade||'';r.line=raw.line||r.line||'';r.threeOrder=raw.threeOrder||r.threeOrder||'';r.bankGroup=raw.bankGroup||r.bankGroup||bankGroupOf(r.venue);r.predictionUrl=raw.predictionUrl||r.predictionUrl||'';r.source=raw.source||r.source||''}if(added||merged){localStorage.setItem(storageKey(),JSON.stringify(state));renderAll()}if(!options.silent)toast(`取込完了：新規 ${added} / 統合 ${merged}${skipped?` / 除外 ${skipped}`:''}`);return {added,merged,skipped}}
 function markBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;const rank=rankForRace(r),unit=unitForRank(state.currentFunds,rank),inv=unit*racePoints(r);if(state.currentFunds<inv){toast('現在資金が予定投資額を下回っています');return}showModal(`<h3>購入登録しますか？</h3><p class="note">${esc(r.venue)} ${r.raceNo}R<br>${rank}ランク複利：1点 ${yen(unit)} × ${racePoints(r)}点 = <b>${yen(inv)}</b><br>実際に購入したレースだけ登録してください。確定すると運用台帳へ追加し、現在資金から購入額を差し引きます。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn primary" onclick="SMART_SELECT.confirmBet('${esc(key)}')">確定</button></div>`)}
@@ -1893,34 +1871,12 @@ function exportLiveLog(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`SMART_FINDER_SELECT_運用ログ_${todayStr()}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},300);appLog('LOG_EXPORTED',{count:logs.length});toast('運用ログを書き出しました');
  }catch(e){appLog('LOG_EXPORT_FAIL',{error:String(e)});toast('ログを書き出せませんでした')}
 }
-
-function addAdditionalFunds(){
- if(testMode){toast('追加資金は本番モードで入力してください');return}
- const input=document.getElementById('additionalFundsAmount'),noteEl=document.getElementById('additionalFundsNote');
- const raw=Math.floor((Number(input?.value)||0)/100)*100;
- if(raw<100){toast('100円以上を100円単位で入力してください');return}
- const note=String(noteEl?.value||'').trim();
- showModal(`<h3>追加資金を入れますか？</h3><p class="note">追加額：<b>${yen(raw)}</b><br>開始資金は変更しません。現在資金へ加算し、累計損益には含めません。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn primary" id="confirmAddFundsBtn">追加する</button></div>`);
- setTimeout(()=>{const b=document.getElementById('confirmAddFundsBtn');if(b)b.onclick=()=>confirmAdditionalFunds(raw,note)},0);
-}
-function confirmAdditionalFunds(amount,note=''){
- const amt=Math.floor((Number(amount)||0)/100)*100;if(amt<100)return;
- state.fundingHistory=Array.isArray(state.fundingHistory)?state.fundingHistory:[];
- state.fundingHistory.push({id:`fund-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,at:new Date().toISOString(),amount:amt,note:String(note||'')});
- recalculateOperations();
- appLog('ADDITIONAL_FUNDS_ADDED',{amount:amt,note:String(note||''),totalAdded:totalAddedFunds(),funds:state.currentFunds});
- save();closeModal();
- const input=document.getElementById('additionalFundsAmount'),noteEl=document.getElementById('additionalFundsNote');if(input)input.value='';if(noteEl)noteEl.value='';
- toast(`${yen(amt)}を追加資金として反映しました`);
-}
-
-window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog,addAdditionalFunds,confirmAdditionalFunds};
+window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog};
 window.addEventListener('message',e=>{if(e.data?.type==='SMART_FINDER_RESULTS'&&e.data.races)receive(e.data.races)});
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab,.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active');renderAll()});
 document.getElementById('editCandidates').onclick=()=>{editMode=!editMode;draftCandidates={...state.candidates};document.getElementById('unsaved').style.display='none';renderCandidates()};
 document.getElementById('saveCandidates').onclick=()=>showModal(`<h3>この内容で保存しますか？</h3><p class="note">使用：${Object.keys(draftCandidates).filter(k=>draftCandidates[k]).map(k=>candidateDefs[k].name).join(' / ')||'なし'}</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" id="doCandidateSave">保存する</button></div>`),document.addEventListener('click',e=>{if(e.target?.id==='doCandidateSave'){state.settingHistory.push({at:new Date().toISOString(),value:{...state.candidates}});state.settingHistory=state.settingHistory.slice(-3);state.candidates={...draftCandidates};editMode=false;save();closeModal();document.getElementById('unsaved').style.display='none';toast('SELECT設定を保存しました')}});
 document.getElementById('editMoney').onclick=()=>{moneyEdit=!moneyEdit;renderSettings()};document.getElementById('saveMoney').onclick=()=>{const old=state.startFunds,n=Number(document.getElementById('startFunds').value)||old;if(settled().length||state.races.some(r=>r.status==='結果待ち')){toast('運用開始後は開始資金を変更しません');moneyEdit=false;renderSettings();return}state.moneyHistory.push({at:new Date().toISOString(),old,new:n});state.startFunds=n;state.currentFunds=n;state.capital=[{at:new Date().toISOString(),value:n,type:'開始資金変更'}];moneyEdit=false;save();toast('資金設定を保存しました')};
-const addFundsBtn=document.getElementById('addFundsBtn');if(addFundsBtn)addFundsBtn.onclick=addAdditionalFunds;
 document.getElementById('importBtn').onclick=()=>{if(testMode){toast('テストモード中は本番検索結果を取り込みません');return}try{const j=JSON.parse(document.getElementById('importJson').value);receive(j)}catch(e){toast('JSON形式を確認してください')}};
 document.getElementById('resetBtn').onclick=()=>showModal(`<h3>${testMode?'テストデータ':'全データ'}を初期化しますか？</h3><p class="note">${testMode?'SAFE TESTの購入・結果・資金だけを消し、3件のテストレースを投票待ちへ戻します。本番データには触れません。':'SELECT設定・レース履歴・資金履歴をすべて消し、30,000円開始へ戻します。'}</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn danger" id="doReset">初期化</button></div>`);document.addEventListener('click',e=>{if(e.target?.id==='doReset'){if(testMode){clearTestData();closeModal();return}state=initial();draftCandidates={...state.candidates};localStorage.removeItem(storageKey());save();closeModal();appLog('DATA_RESET');toast('初期化しました')}});
 document.getElementById('testModeBtn').onclick=()=>testMode?exitTestMode():enterTestMode();
