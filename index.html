@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.14.0 ATTACK DEFENSE MODE</title>
+<title>WINTICKET SMART FINDER SELECT / v3.14.1 CAPITAL TREND PROFIT FIX</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -1648,9 +1648,11 @@ function renderCapitalTrend(){
  const start=Number(state.startFunds)||values[0]||0;
  const current=Number(state.currentFunds)||values[values.length-1]||0;
  const hi=Math.max(...values),lo=Math.min(...values);
- const pnl=current-start;
+ const pnl=profitTotal();
+ const added=totalAddedFunds();
  sum.innerHTML=[
    `<span class="capitalTrendPill">開始 <b>${yen(start)}</b></span>`,
+   `<span class="capitalTrendPill">追加資金 <b>${yen(added)}</b></span>`,
    `<span class="capitalTrendPill">現在 <b>${yen(current)}</b></span>`,
    `<span class="capitalTrendPill">最高 <b>${yen(hi)}</b></span>`,
    `<span class="capitalTrendPill">最低 <b>${yen(lo)}</b></span>`
@@ -1684,7 +1686,7 @@ function renderCapitalTrend(){
  const last=pts[pts.length-1];
  const firstAt=pts[0]?.at?new Date(pts[0].at).toLocaleDateString('ja-JP'):'開始';
  const lastAt=last?.at?new Date(last.at).toLocaleDateString('ja-JP'):'現在';
- foot.innerHTML=`<span>${esc(firstAt)} → ${esc(lastAt)}　${pts.length}ポイント</span><span class="${pnl>=0?'profit':'loss'}">開始比 ${pnl>=0?'+':''}${yen(pnl)}</span>`;
+ foot.innerHTML=`<span>${esc(firstAt)} → ${esc(lastAt)}　${pts.length}ポイント</span><span class="${pnl>=0?'profit':'loss'}">実質損益 ${pnl>=0?'+':''}${yen(pnl)}</span>`;
 }
 
 function renderHome(){
