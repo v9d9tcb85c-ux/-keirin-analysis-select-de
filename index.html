@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.14.2 AI UNPUBLISHED MONITOR</title>
+<title>WINTICKET SMART FINDER SELECT / v3.14.3 AI UNPUBLISHED STRICT</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -1257,7 +1257,7 @@ body::after{
       <div class="sfHealthCard" id="sfHealthAgent"><small>PC AGENT</small><b id="sfHealthAgentValue">確認中</b><span id="sfHealthAgentNote">接続状態</span></div>
       <div class="sfHealthCard"><small>対象開催場</small><b id="sfHealthVenueValue">—</b><span>今回取得した開催場</span></div>
       <div class="sfHealthCard"><small>確認レース</small><b id="sfHealthRaceValue">—</b><span>APIから取得できた範囲</span></div>
-      <div class="sfHealthCard" id="sfHealthAi"><small>AI未公開</small><b id="sfHealthAiValue">—</b><span id="sfHealthAiNote">公開状況を確認します</span></div>
+      <div class="sfHealthCard" id="sfHealthAi"><small>AI未公開</small><b id="sfHealthAiValue">—</b><span id="sfHealthAiNote">専用データを確認します</span></div>
       <div class="sfHealthCard"><small>最終候補</small><b id="sfHealthMatchValue">—</b><span id="sfHealthErrorCount">エラー 0件</span></div>
     </section>
 
@@ -1898,41 +1898,38 @@ function sfObjBool(obj,...names){
  return null;
 }
 function sfAiUnpublishedSummary(st){
- let raceCount=sfCounter(st,
-   'ai_unpublished_count','ai_unpublished','unpublished_count','ai_pending_count',
-   'pending_ai_count','not_ready_count','pending_count','unpublished'
- );
- if(raceCount===null){
-   for(const key of ['ai_unpublished_list','ai_unpublished','unpublished','pending_ai','pending_list','not_ready']){
-     if(Array.isArray(st?.[key])){raceCount=st[key].length;break}
-   }
- }
+ let raceCount=sfCounter(st,'ai_unpublished_count');
+ if(raceCount===null && Array.isArray(st?.ai_unpublished_list))raceCount=st.ai_unpublished_list.length;
+
  const venues=Array.isArray(st?.venues_info)?st.venues_info:[];
  let publishedVenues=0,unpublishedVenues=0,explicitVenues=0,venueRaceUnpub=0,venueRaceKnown=false;
+
  for(const v of venues){
-   let published=sfObjBool(v,'ai_ready','ai_published','ai_public','published','ready');
-   if(published===null){
-     let unpublished=sfObjBool(v,'ai_unpublished','not_ready','pending','ai_pending');
-     if(unpublished!==null)published=!unpublished;
-   }
-   if(published===null){
-     const statusBlob=[
-       v?.ai_status,v?.aiState,v?.status,v?.phase,v?.message,v?.detail,v?.note
-     ].filter(Boolean).join(' / ');
-     if(statusBlob){
-       if(/未公開|pending|not.?published|未発表|準備中|公開待ち/i.test(statusBlob))published=false;
-       else if(/公開|ready|available|完了/i.test(statusBlob))published=true;
-     }
-   }
+   let published=null;
+
+   const aiReady=sfObjBool(v,'ai_ready','ai_published','ai_public');
+   if(aiReady!==null)published=aiReady;
+
+   const aiUnpublished=sfObjBool(v,'ai_unpublished');
+   if(published===null && aiUnpublished!==null)published=!aiUnpublished;
+
    if(published===true){publishedVenues++;explicitVenues++}
    else if(published===false){unpublishedVenues++;explicitVenues++}
-   const perVenue=sfObjNumber(v,
-     'ai_unpublished_count','unpublished_count','pending_ai_count','not_ready_count','pending_count'
-   );
+
+   const perVenue=sfObjNumber(v,'ai_unpublished_count');
    if(perVenue!==null){venueRaceUnpub+=perVenue;venueRaceKnown=true}
  }
+
  if(raceCount===null && venueRaceKnown)raceCount=venueRaceUnpub;
- return {raceCount,publishedVenues,unpublishedVenues,explicitVenues,totalVenues:venues.length};
+
+ return {
+   raceCount,
+   publishedVenues,
+   unpublishedVenues,
+   explicitVenues,
+   totalVenues:venues.length,
+   hasDedicatedData: raceCount!==null || explicitVenues>0
+ };
 }
 function aiUnpublishedLabel(st){
  const a=sfAiUnpublishedSummary(st);
@@ -1968,11 +1965,11 @@ function updateOperationalMonitor(st){
    if(ai.explicitVenues){
      ain.textContent=`公開 ${ai.publishedVenues}場 / 未公開 ${ai.unpublishedVenues}場`;
    }else if(ai.raceCount!==null){
-     ain.textContent='AI予想未公開としてカウント';
+     ain.textContent='専用カウンタから取得';
    }else{
-     ain.textContent='公開状況データ待ち';
+     ain.textContent='専用データ未供給';
    }
-   aiCard.className='sfHealthCard '+((ai.raceCount||ai.unpublishedVenues)?'warn':'ok');
+   aiCard.className='sfHealthCard '+(!ai.hasDedicatedData?'':((ai.raceCount||ai.unpublishedVenues)?'warn':'ok'));
  }
 
  const matches=Array.isArray(st?.matches)?st.matches.length:0;
