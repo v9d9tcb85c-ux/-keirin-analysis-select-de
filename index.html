@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.13.5 CLEAN BLUE SKIN TRIAL</title>
+<title>WINTICKET SMART FINDER SELECT / v3.13.9 MONITOR BACKUP</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -703,6 +703,22 @@ button,input,select,textarea,.tab{position:relative;z-index:3}
 
 
 /* v3.0 safe-add: visual process board only. Existing SELECT acquisition is unchanged. */
+
+.sfHealthGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:10px 0 14px}
+.sfHealthCard{padding:11px 12px;border:1px solid rgba(73,143,224,.28);border-radius:13px;background:linear-gradient(180deg,rgba(7,18,42,.92),rgba(4,10,27,.95));min-width:0}
+.sfHealthCard small{display:block;color:#7f96bb;font-size:9px;letter-spacing:.08em;margin-bottom:5px}
+.sfHealthCard b{display:block;color:#edf6ff;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sfHealthCard span{display:block;color:#8fa5c5;font-size:9px;margin-top:3px}
+.sfHealthCard.ok{border-color:rgba(63,223,145,.38);box-shadow:inset 0 0 18px rgba(63,223,145,.025)}
+.sfHealthCard.warn{border-color:rgba(255,196,45,.42)}
+.sfHealthCard.bad{border-color:rgba(255,72,102,.62);box-shadow:0 0 14px rgba(255,72,102,.10)}
+.sfErrorBanner{display:none;align-items:flex-start;gap:10px;margin:10px 0 14px;padding:12px 13px;border:1px solid rgba(255,70,98,.66);border-radius:13px;background:linear-gradient(180deg,rgba(67,10,25,.86),rgba(29,5,16,.92));box-shadow:0 0 16px rgba(255,53,89,.10)}
+.sfErrorBanner.show{display:flex}
+.sfErrorIcon{font-size:20px;line-height:1}
+.sfErrorText b{display:block;color:#ffd9df;font-size:13px;margin-bottom:3px}
+.sfErrorText span{display:block;color:#e9aeb9;font-size:10px;line-height:1.55;word-break:break-word}
+@media(max-width:760px){.sfHealthGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.sfHealthCard{padding:9px 10px}.sfHealthCard b{font-size:13px}}
+
 .sfProcessBoard{margin:12px 0;padding:14px;border:1px solid rgba(56,151,235,.38);border-radius:18px;background:linear-gradient(180deg,rgba(7,24,49,.94),rgba(5,14,31,.96));box-shadow:inset 0 0 28px rgba(41,125,221,.04)}
 .sfProcessTop{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
 .sfProcessTop h3{margin:2px 0 4px;font-size:22px}.sfProcessTop p{margin:0;color:#91a7c9;font-size:11px;line-height:1.55}
@@ -1232,6 +1248,18 @@ body::after{
       <div class="sfTimeoutNote" id="sfTimeoutNote">通信が遅い場合は、前回の完了結果を残したまま自動で状態確認を再試行します。</div>
     </section>
 
+    <section id="sfErrorBanner" class="sfErrorBanner" aria-live="polite">
+      <div class="sfErrorIcon">⚠</div>
+      <div class="sfErrorText"><b id="sfErrorTitle">PC Agent / 取得エラー</b><span id="sfErrorMessage">エラー内容を確認しています。</span></div>
+    </section>
+
+    <section class="sfHealthGrid" aria-label="SMART FINDER検索内訳">
+      <div class="sfHealthCard" id="sfHealthAgent"><small>PC AGENT</small><b id="sfHealthAgentValue">確認中</b><span id="sfHealthAgentNote">接続状態</span></div>
+      <div class="sfHealthCard"><small>対象開催場</small><b id="sfHealthVenueValue">—</b><span>今回取得した開催場</span></div>
+      <div class="sfHealthCard"><small>確認レース</small><b id="sfHealthRaceValue">—</b><span>APIから取得できた範囲</span></div>
+      <div class="sfHealthCard"><small>最終候補</small><b id="sfHealthMatchValue">—</b><span id="sfHealthErrorCount">エラー 0件</span></div>
+    </section>
+
     <section class="dashboardGrid">
       <div class="dashPanel operationOverview">
         <div class="dashPanelHead"><div><div class="eyebrow">SMART FINDER OPERATION LEDGER</div><h2>運用 <span class="dotTrail">•••</span></h2></div><div class="dashHint">実際の購入だけを<br>資金へ反映</div></div>
@@ -1318,6 +1346,11 @@ body::after{
     <section class="section"><div class="sectionHead"><h3><span>LIVE TRIAL</span> 数日実稼働の記録</h3></div><div class="settingsCard">
       <p class="note">この版は本番モードで開始します。購入・結果・修正・取消・SMART FINDER取込などの操作ログをブラウザ内に最大2,000件保存し、本番状態は日ごとに最大7日分の復旧用スナップショットを保持します。</p>
       <div class="actions"><button class="btn primary" id="exportLiveLogBtn">運用ログを書き出す</button><span class="badge green">実稼働検証中</span></div>
+    </div></section>
+    <section class="section"><div class="sectionHead"><h3><span>SAFE BACKUP</span> 実践データ保全</h3></div><div class="settingsCard">
+      <p class="note">購入履歴・払戻・追加資金・資金推移・SELECT設定を1ファイルへ保存します。index.htmlを更新する前の保険として使えます。検索取得ロジックには触れません。</p>
+      <div class="actions"><button class="btn save" id="fullBackupBtn">実践データをバックアップ</button><button class="btn" id="restoreBackupBtn">バックアップから復元</button><input id="restoreBackupFile" type="file" accept="application/json,.json" style="display:none"></div>
+      <div class="note" id="backupStateNote">本番データをそのまま保存します。</div>
     </div></section>
     <section class="section"><div class="sectionHead"><h3><span>IMPORT</span> SMART FINDER結果受信</h3></div><div class="settingsCard">
       <p class="note">将来SMART FINDERから自動で渡せる受け口を先に用意しています。今はJSON貼付またはファイル読込で確認できます。同一「開催日＋開催場＋R」は重複登録せず、候補だけ同じカードへ追加します。</p>
@@ -1822,7 +1855,55 @@ function setSfUi(st,detail){
 }
 
 function setProcessStep(n,stateName){const e=document.getElementById(`sfStep${n}`);if(e)e.className=`sfStep ${stateName}`}
+
+function sfCounter(st,...names){
+ const c=(st&&typeof st.counters==='object'&&st.counters)||{};
+ for(const n of names){
+   const v=st?.[n] ?? c?.[n];
+   if(v!==undefined&&v!==null&&v!==''&&!Number.isNaN(Number(v)))return Number(v);
+ }
+ return null;
+}
+function updateOperationalMonitor(st){
+ const agent=document.getElementById('sfHealthAgent'),av=document.getElementById('sfHealthAgentValue'),an=document.getElementById('sfHealthAgentNote');
+ const vv=document.getElementById('sfHealthVenueValue'),rv=document.getElementById('sfHealthRaceValue'),mv=document.getElementById('sfHealthMatchValue'),ec=document.getElementById('sfHealthErrorCount');
+ const banner=document.getElementById('sfErrorBanner'),title=document.getElementById('sfErrorTitle'),msg=document.getElementById('sfErrorMessage');
+ if(!agent||!av||!an||!vv||!rv||!mv||!ec||!banner||!title||!msg)return;
+
+ const online=st?.agent_online!==false;
+ av.textContent=online?'接続中':'未接続';
+ an.textContent=online?'PC Agent応答あり':'PC Agentを確認してください';
+ agent.className='sfHealthCard '+(online?'ok':'bad');
+
+ const venues=Array.isArray(st?.venues_info)?st.venues_info.length:null;
+ vv.textContent=venues===null?'—':`${venues}場`;
+
+ const checked=sfCounter(st,'checked_races','race_done','done_races');
+ const total=sfCounter(st,'race_total','total_races');
+ rv.textContent=checked!==null?(total!==null?`${checked}/${total}R`:`${checked}R`):(total!==null?`${total}R`:'—');
+
+ const matches=Array.isArray(st?.matches)?st.matches.length:0;
+ mv.textContent=`${matches}件`;
+ const errors=Array.isArray(st?.errors)?st.errors.filter(Boolean):[];
+ ec.textContent=`エラー ${errors.length}件`;
+
+ const phase=String(st?.phase||'').toLowerCase();
+ const isError=phase==='error'||errors.length>0||!online;
+ if(isError){
+   banner.classList.add('show');
+   const raw=errors.length?String(errors[0]):(!online?'PC Agentから応答がありません。':'検索処理でエラーを検出しました。');
+   const fileMissing=/FileNotFoundError|WinError\s*2|指定されたファイルが見つかりません/i.test(raw);
+   title.textContent=fileMissing?'PC側の取得起動に失敗しています':'SMART FINDERの異常を検出しました';
+   msg.textContent=fileMissing?`PC Agent再起動で復旧する可能性があります。詳細：${raw}`:raw;
+ }else{
+   banner.classList.remove('show');
+   title.textContent='PC Agent / 取得エラー';
+   msg.textContent='';
+ }
+}
+
 function updateProcessBoard(st,override=''){
+ updateOperationalMonitor(st);
  const title=document.getElementById('sfProcessTitle'),detail=document.getElementById('sfProcessDetail'),count=document.getElementById('sfProcessCount'),bar=document.getElementById('sfProgressBar');
  if(!title||!detail||!count||!bar)return;
  [1,2,3,4].forEach(n=>setProcessStep(n,'wait'));
@@ -1885,6 +1966,68 @@ async function startSmartFinder(){
 }
 async function retrySmartFinder(){if(testMode){toast('テストモード中は再検索しません');return}try{const st=await fetch('/api/status',{cache:'no-store'}).then(r=>r.json());if(st.running){toast('すでに検索中です');return}const d=await sfPost('/api/control/auto-search',{});if(!d.ok)toast('再検索できません')}catch(e){toast('SMART FINDERに接続できません')}finally{syncFromSmartFinder()}}
 async function stopSmartFinder(){try{await sfPost('/api/control/stop',{})}catch(e){}finally{syncFromSmartFinder()}}
+
+let pendingBackupRestore=null;
+function exportFullBackup(){
+ if(testMode){toast('本番モードへ戻ってからバックアップしてください');return}
+ try{
+   persistState();
+   const logs=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');
+   const payload={
+     kind:'SMART_FINDER_SELECT_FULL_BACKUP',
+     schema:1,
+     build:'v3.13.9-monitor-backup',
+     exportedAt:new Date().toISOString(),
+     storageKey:storageKey(),
+     state:JSON.parse(JSON.stringify(state)),
+     logs
+   };
+   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+   const a=document.createElement('a');
+   a.href=URL.createObjectURL(blob);
+   a.download=`SMART_FINDER_SELECT_実践バックアップ_${todayStr()}.json`;
+   document.body.appendChild(a);a.click();
+   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},300);
+   const note=document.getElementById('backupStateNote');
+   if(note)note.textContent=`バックアップ完了：${new Date().toLocaleString('ja-JP')}｜購入 ${purchased().length}件｜追加資金 ${state.fundingHistory?.length||0}件`;
+   appLog('FULL_BACKUP_EXPORTED',{races:(state.races||[]).length,purchased:purchased().length,funding:(state.fundingHistory||[]).length});
+   toast('実践データをバックアップしました');
+ }catch(e){
+   appLog('FULL_BACKUP_FAIL',{error:String(e)});
+   toast('バックアップを作成できませんでした');
+ }
+}
+function chooseBackupRestore(){
+ if(testMode){toast('本番モードへ戻ってから復元してください');return}
+ const f=document.getElementById('restoreBackupFile');if(f){f.value='';f.click()}
+}
+function readBackupRestoreFile(file){
+ if(!file)return;
+ const reader=new FileReader();
+ reader.onload=()=>{
+   try{
+     const p=JSON.parse(String(reader.result||''));
+     if(p?.kind!=='SMART_FINDER_SELECT_FULL_BACKUP'||!p?.state||!Array.isArray(p.state.races))throw new Error('対応バックアップではありません');
+     pendingBackupRestore=p;
+     const r=p.state.races||[],fund=p.state.fundingHistory||[];
+     showModal(`<h3>このバックアップへ復元しますか？</h3><p class="note">保存日時：${esc(p.exportedAt?new Date(p.exportedAt).toLocaleString('ja-JP'):'不明')}<br>レース履歴：${r.length}件 / 追加資金：${fund.length}件<br><br>現在の本番データはこの内容で置き換わります。先に現在データをバックアップしておくと安全です。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" onclick="SMART_SELECT.confirmBackupRestore()">復元する</button></div>`);
+   }catch(e){pendingBackupRestore=null;toast('対応するバックアップJSONを選んでください')}
+ };
+ reader.readAsText(file,'utf-8');
+}
+function confirmBackupRestore(){
+ if(!pendingBackupRestore?.state)return;
+ try{
+   localStorage.setItem(LIVE_KEY,JSON.stringify(pendingBackupRestore.state));
+   if(Array.isArray(pendingBackupRestore.logs))localStorage.setItem(LOG_KEY,JSON.stringify(pendingBackupRestore.logs.slice(-LOG_LIMIT)));
+   appLog('FULL_BACKUP_RESTORED',{exportedAt:pendingBackupRestore.exportedAt||''});
+   pendingBackupRestore=null;
+   closeModal();
+   toast('復元しました。画面を再読み込みします');
+   setTimeout(()=>location.reload(),700);
+ }catch(e){toast('復元に失敗しました')}
+}
+
 function exportLiveLog(){
  try{
   const logs=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');
@@ -1914,7 +2057,7 @@ function confirmAdditionalFunds(amount,note=''){
  toast(`${yen(amt)}を追加資金として反映しました`);
 }
 
-window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog,addAdditionalFunds,confirmAdditionalFunds};
+window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog,exportFullBackup,chooseBackupRestore,readBackupRestoreFile,confirmBackupRestore,addAdditionalFunds,confirmAdditionalFunds};
 window.addEventListener('message',e=>{if(e.data?.type==='SMART_FINDER_RESULTS'&&e.data.races)receive(e.data.races)});
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab,.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active');renderAll()});
 document.getElementById('editCandidates').onclick=()=>{editMode=!editMode;draftCandidates={...state.candidates};document.getElementById('unsaved').style.display='none';renderCandidates()};
@@ -1927,6 +2070,9 @@ document.getElementById('testModeBtn').onclick=()=>testMode?exitTestMode():enter
 document.getElementById('clearTestBtn').onclick=()=>showModal(`<h3>テストデータを消去しますか？</h3><p class="note">本番データには触れません。安全テスト用の購入・結果・資金履歴だけを消去します。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn danger" id="doClearTest">消去</button></div>`);document.addEventListener('click',e=>{if(e.target?.id==='doClearTest'){clearTestData();closeModal()}});
 const exitTop=document.getElementById('exitTestTop');if(exitTop)exitTop.onclick=exitTestMode;
 const exportLiveLogBtn=document.getElementById('exportLiveLogBtn');if(exportLiveLogBtn)exportLiveLogBtn.onclick=exportLiveLog;
+const fullBackupBtn=document.getElementById('fullBackupBtn');if(fullBackupBtn)fullBackupBtn.onclick=exportFullBackup;
+const restoreBackupBtn=document.getElementById('restoreBackupBtn');if(restoreBackupBtn)restoreBackupBtn.onclick=chooseBackupRestore;
+const restoreBackupFile=document.getElementById('restoreBackupFile');if(restoreBackupFile)restoreBackupFile.onchange=e=>readBackupRestoreFile(e.target.files?.[0]);
 document.getElementById('modalWrap').addEventListener('click',e=>{if(e.target.id==='modalWrap')closeModal()});
 const sfStart=document.getElementById('sfStartBtn'),sfRetry=document.getElementById('sfRetryBtn'),sfStop=document.getElementById('sfStopBtn');
 if(sfStart)sfStart.onclick=startSmartFinder;if(sfRetry)sfRetry.onclick=retrySmartFinder;if(sfStop)sfStop.onclick=stopSmartFinder;
