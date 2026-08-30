@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.16.2 SAFE RENDER</title>
+<title>WINTICKET SMART FINDER SELECT / v3.16.3 LIVE EXPOSURE STATS</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -203,7 +203,7 @@ body{background:
 .periodStatsHead small{display:block;color:#8399ba;font-size:9px;letter-spacing:.13em;font-weight:900}
 .periodStatsHead h3{margin:3px 0 0;font-size:20px}
 .periodStatsHead .periodDate{font-size:10px;color:#90a4c2;text-align:right}
-.periodMetricGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.periodMetricGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .periodMetric{border:1px solid rgba(61,111,191,.23);border-radius:11px;background:rgba(4,13,31,.72);padding:9px;min-width:0}
 .periodMetric .lab{font-size:9px;color:#7f96ba;margin-bottom:4px}
 .periodMetric .val{font-size:17px;font-weight:900;color:#edf6ff;line-height:1.2;word-break:break-word}
@@ -1352,7 +1352,7 @@ body::after{
           <div class="periodMetricGrid" id="monthlyStatsMetrics"></div>
         </div>
       </div>
-      <div class="note" style="margin-top:9px">損益・回収率は結果確定済みレースだけで計算します。結果待ちは購入数には含めますが、確定前に損失扱いしません。追加資金は利益に含めません。</div>
+      <div class="note" style="margin-top:9px">損益・回収率は結果確定済みレースだけで計算します。購入総額・結果待ち投資では未確定分も別表示し、確定前に損失扱いしません。追加資金は利益に含めません。</div>
     </section>
 
     <section class="section"><div class="settingsCard"><h3 style="margin-top:0">直近7日の実践成績</h3><div style="overflow:auto"><table class="recentDaysTable"><thead><tr><th>日付</th><th>購入</th><th>確定</th><th>的中</th><th>投資</th><th>払戻</th><th>損益</th><th>回収率</th></tr></thead><tbody id="recentDailyRows"></tbody></table></div></div></section>
@@ -1796,14 +1796,18 @@ function statsForRaceList(list){
  const settledList=purchasedList.filter(r=>['的中','不的中'].includes(r.status));
  const pendingList=purchasedList.filter(r=>!['的中','不的中'].includes(r.status));
  const hits=settledList.filter(r=>r.status==='的中').length;
+ const purchasedInv=purchasedList.reduce((s,r)=>s+(Number(r.investmentConfirmed)||0),0);
+ const pendingInv=pendingList.reduce((s,r)=>s+(Number(r.investmentConfirmed)||0),0);
  const inv=settledList.reduce((s,r)=>s+(Number(r.investmentConfirmed)||0),0);
  const pay=settledList.reduce((s,r)=>s+(Number(r.payout)||0),0);
  const pl=pay-inv,roi=inv?pay/inv*100:0,hit=settledList.length?hits/settledList.length*100:0;
- return {purchased:purchasedList.length,settled:settledList.length,pending:pendingList.length,hits,inv,pay,pl,roi,hit};
+ return {purchased:purchasedList.length,settled:settledList.length,pending:pendingList.length,hits,purchasedInv,pendingInv,inv,pay,pl,roi,hit};
 }
 function periodMetricHtml(s){
  const items=[
    ['購入',`${s.purchased}R`,`確定 ${s.settled} / 待ち ${s.pending}`,''],
+   ['購入総額',yen(s.purchasedInv),'結果待ちを含む実購入額',''],
+   ['結果待ち投資',yen(s.pendingInv),s.pending?`${s.pending}Rの結果待ち`:'結果待ちなし',''],
    ['的中',`${s.hits}R`,s.settled?`的中率 ${pct(s.hit)}`:'確定データなし',''],
    ['確定投資',yen(s.inv),`結果確定済み ${s.settled}R`,''],
    ['払戻',yen(s.pay),'確定払戻合計',''],
