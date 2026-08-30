@@ -29,6 +29,12 @@ state = {
     "last_control": "",
     "last_control_at": 0.0,
     "retry_preserve": False,
+    "schedule_config": {
+        "morning_time": "07:00",
+        "mn_time": "15:00",
+        "source": "default",
+        "updated_at": 0.0,
+    },
 }
 
 
@@ -82,6 +88,47 @@ def index():
 @app.get("/api/status")
 def status():
     return jsonify(public_state())
+
+
+def valid_hhmm(s):
+    try:
+        hh, mm = [int(x) for x in str(s).split(":", 1)]
+        return 0 <= hh <= 23 and 0 <= mm <= 59 and len(str(s)) == 5
+    except Exception:
+        return False
+
+@app.post("/api/control/schedule")
+def set_schedule():
+    if not control_ok():
+        return jsonify(ok=False, reason="unauthorized"), 401
+    s = public_state()
+    if not s["agent_online"]:
+        return jsonify(ok=False, reason="pc_offline"), 409
+    if s["running"]:
+        return jsonify(ok=False, reason="running"), 409
+
+    body = request.get_json(silent=True) or {}
+    morning = str(body.get("morning_time") or "").strip()
+    mn = str(body.get("mn_time") or "").strip()
+    if not valid_hhmm(morning) or not valid_hhmm(mn):
+        return jsonify(ok=False, reason="invalid_time"), 400
+
+    cid = enqueue("set_schedule", {"morning_time": morning, "mn_time": mn})
+    if not cid:
+        return jsonify(ok=False, reason="command_pending"), 409
+
+    with lock:
+        mark_control("自動検索時刻変更")
+        state["schedule_config"] = {
+            "morning_time": morning,
+            "mn_time": mn,
+            "source": "pending_pc_apply",
+            "updated_at": now(),
+        }
+        state["detail"] = f"PCへ自動検索時刻の変更を依頼しました。朝 {morning} / MN {mn}"
+        state["updated_at"] = now()
+
+    return jsonify(ok=True, command_id=cid, morning_time=morning, mn_time=mn)
 
 @app.post("/api/control/load-board")
 def load_board():
@@ -308,7 +355,7 @@ def agent_progress():
             state["retry_preserve"] = False
             preserve = False
 
-        for k in ("phase","running","current","detail","venues_info","matches","skipped","errors","counters"):
+        for k in ("phase","running","current","detail","venues_info","matches","skipped","errors","counters","schedule_config"):
             if k not in data:
                 continue
             if preserve and k in ("matches","skipped","errors","counters"):
@@ -325,7 +372,7 @@ def agent_finish():
     data = request.get_json(silent=True) or {}
     with lock:
         state["agent_last_seen"] = now()
-        for k in ("phase","current","detail","venues_info","matches","skipped","errors","counters"):
+        for k in ("phase","current","detail","venues_info","matches","skipped","errors","counters","schedule_config"):
             if k in data:
                 state[k] = data[k]
         state["running"] = False
