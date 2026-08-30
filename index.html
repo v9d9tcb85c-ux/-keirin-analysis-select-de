@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.15.0 SCHEDULE SETTINGS</title>
+<title>WINTICKET SMART FINDER SELECT / v3.15.2 SCHEDULE INPUT FIX</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -1873,12 +1873,17 @@ function normalizeSmartFinderMatch(m){
 let sfBusy=false;
 async function sfPost(url,body={}){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});let d={};try{d=await r.json()}catch(e){}return {http:r.status,...d}}
 
+let scheduleInputDirty=false;
 function validTimeText(v){return /^\d{2}:\d{2}$/.test(String(v||''))}
 function renderScheduleStatus(st){
  const m=document.getElementById('autoMorningTime'),n=document.getElementById('autoMnTime'),note=document.getElementById('scheduleStateNote');
  const sc=st?.schedule_config||{};
- if(m&&validTimeText(sc.morning_time)&&document.activeElement!==m)m.value=sc.morning_time;
- if(n&&validTimeText(sc.mn_time)&&document.activeElement!==n)n.value=sc.mn_time;
+ // While the user is editing either time field, do not overwrite either field
+ // with the 1.5-second status poll. This prevents morning reverting when MN is edited.
+ if(!scheduleInputDirty){
+   if(m&&validTimeText(sc.morning_time)&&document.activeElement!==m)m.value=sc.morning_time;
+   if(n&&validTimeText(sc.mn_time)&&document.activeElement!==n)n.value=sc.mn_time;
+ }
  if(note){
    if(validTimeText(sc.morning_time)&&validTimeText(sc.mn_time)){
      note.textContent=`PC適用中：朝 ${sc.morning_time}（M/D/N）｜MN ${sc.mn_time}（MN）`;
@@ -1903,6 +1908,7 @@ async function saveAutoSchedule(){
    }
    if(note)note.textContent=`送信済み：朝 ${morning} / MN ${mn}。PC適用を確認中…`;
    toast('自動検索時刻をPCへ送信しました');
+   scheduleInputDirty=false;
    setTimeout(syncFromSmartFinder,1200);
  }catch(e){
    if(note)note.textContent='時刻設定の送信に失敗しました。';
@@ -2219,6 +2225,8 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelect
 document.getElementById('editCandidates').onclick=()=>{editMode=!editMode;draftCandidates={...state.candidates};document.getElementById('unsaved').style.display='none';renderCandidates()};
 document.getElementById('saveCandidates').onclick=()=>showModal(`<h3>この内容で保存しますか？</h3><p class="note">使用：${Object.keys(draftCandidates).filter(k=>draftCandidates[k]).map(k=>candidateDefs[k].name).join(' / ')||'なし'}</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" id="doCandidateSave">保存する</button></div>`),document.addEventListener('click',e=>{if(e.target?.id==='doCandidateSave'){state.settingHistory.push({at:new Date().toISOString(),value:{...state.candidates}});state.settingHistory=state.settingHistory.slice(-3);state.candidates={...draftCandidates};editMode=false;save();closeModal();document.getElementById('unsaved').style.display='none';toast('SELECT設定を保存しました')}});
 document.getElementById('editMoney').onclick=()=>{moneyEdit=!moneyEdit;renderSettings()};document.getElementById('saveMoney').onclick=()=>{const old=state.startFunds,n=Number(document.getElementById('startFunds').value)||old;if(settled().length||state.races.some(r=>r.status==='結果待ち')){toast('運用開始後は開始資金を変更しません');moneyEdit=false;renderSettings();return}state.moneyHistory.push({at:new Date().toISOString(),old,new:n});state.startFunds=n;state.currentFunds=n;state.capital=[{at:new Date().toISOString(),value:n,type:'開始資金変更'}];moneyEdit=false;save();toast('資金設定を保存しました')};
+const autoMorningTime=document.getElementById('autoMorningTime'),autoMnTime=document.getElementById('autoMnTime');
+[autoMorningTime,autoMnTime].forEach(el=>{if(el){el.addEventListener('input',()=>{scheduleInputDirty=true});el.addEventListener('change',()=>{scheduleInputDirty=true})}});
 const saveScheduleBtn=document.getElementById('saveScheduleBtn');if(saveScheduleBtn)saveScheduleBtn.onclick=saveAutoSchedule;
 const modeAttackBtn=document.getElementById('modeAttackBtn');if(modeAttackBtn)modeAttackBtn.onclick=()=>requestInvestmentMode('attack');
 const modeDefenseBtn=document.getElementById('modeDefenseBtn');if(modeDefenseBtn)modeDefenseBtn.onclick=()=>requestInvestmentMode('defense');
