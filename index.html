@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.14.3 AI UNPUBLISHED STRICT</title>
+<title>WINTICKET SMART FINDER SELECT / v3.15.0 SCHEDULE SETTINGS</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -1339,6 +1339,15 @@ body::after{
       <p class="note">現在資金は投票・払戻・追加資金で自動更新し、直接変更しません。攻め/守りの切替は購入前の予定1点金額だけに反映し、購入済み履歴は固定して保存します。</p>
       <button class="btn save" id="saveMoney" style="display:none;width:100%">資金設定を保存</button>
     </div></section>
+    <section class="section"><div class="sectionHead"><h3><span>AUTO SCHEDULE</span> 自動検索時刻</h3></div><div class="settingsCard">
+      <p class="note">検索内容は変更しません。朝はF2の M / D / N、MNはF2の MNだけを検索し、ここでは開始時刻だけ変更します。保存した時刻はPC側へ保存され、PC Agent再起動後も残ります。</p>
+      <div class="formRow">
+        <div class="field"><label>朝の自動検索（M / D / N）</label><input id="autoMorningTime" type="time" step="60" value="07:00"></div>
+        <div class="field"><label>MNの自動検索</label><input id="autoMnTime" type="time" step="60" value="15:00"></div>
+      </div>
+      <button class="btn primary" id="saveScheduleBtn" style="width:100%">自動検索時刻を保存</button>
+      <div class="note" id="scheduleStateNote" style="margin-top:9px">PC Agentの現在設定を確認しています。</div>
+    </div></section>
     <section class="section"><div class="sectionHead"><h3><span>ADDITIONAL FUNDS</span> 追加資金</h3></div><div class="settingsCard">
       <p class="note">運用開始後の開始資金は変更せず、追加で入れた資金を別履歴として現在資金へ加算します。追加資金は利益には含めません。購入額・払戻を後から修正しても再計算時に残ります。</p>
       <div class="formRow">
@@ -1863,7 +1872,46 @@ function normalizeSmartFinderMatch(m){
 }
 let sfBusy=false;
 async function sfPost(url,body={}){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});let d={};try{d=await r.json()}catch(e){}return {http:r.status,...d}}
+
+function validTimeText(v){return /^\d{2}:\d{2}$/.test(String(v||''))}
+function renderScheduleStatus(st){
+ const m=document.getElementById('autoMorningTime'),n=document.getElementById('autoMnTime'),note=document.getElementById('scheduleStateNote');
+ const sc=st?.schedule_config||{};
+ if(m&&validTimeText(sc.morning_time)&&document.activeElement!==m)m.value=sc.morning_time;
+ if(n&&validTimeText(sc.mn_time)&&document.activeElement!==n)n.value=sc.mn_time;
+ if(note){
+   if(validTimeText(sc.morning_time)&&validTimeText(sc.mn_time)){
+     note.textContent=`PC適用中：朝 ${sc.morning_time}（M/D/N）｜MN ${sc.mn_time}（MN）`;
+   }else{
+     note.textContent='PC Agentから時刻設定を取得中です。';
+   }
+ }
+}
+async function saveAutoSchedule(){
+ if(testMode){toast('本番モードで設定してください');return}
+ const morning=String(document.getElementById('autoMorningTime')?.value||'').trim();
+ const mn=String(document.getElementById('autoMnTime')?.value||'').trim();
+ if(!validTimeText(morning)||!validTimeText(mn)){toast('時刻をHH:MMで指定してください');return}
+ const note=document.getElementById('scheduleStateNote');
+ try{
+   if(note)note.textContent='PC Agentへ時刻変更を送信しています…';
+   const d=await sfPost('/api/control/schedule',{morning_time:morning,mn_time:mn});
+   if(!d.ok){
+     if(note)note.textContent=`保存できませんでした：${d.reason||'unknown'}`;
+     toast('自動検索時刻を保存できません');
+     return;
+   }
+   if(note)note.textContent=`送信済み：朝 ${morning} / MN ${mn}。PC適用を確認中…`;
+   toast('自動検索時刻をPCへ送信しました');
+   setTimeout(syncFromSmartFinder,1200);
+ }catch(e){
+   if(note)note.textContent='時刻設定の送信に失敗しました。';
+   toast('SMART FINDERに接続できません');
+ }
+}
+
 function setSfUi(st,detail){
+ renderScheduleStatus(st);
  const link=document.getElementById('sfLinkState'),start=document.getElementById('sfStartBtn'),retry=document.getElementById('sfRetryBtn'),stop=document.getElementById('sfStopBtn'),d=document.getElementById('sfSyncDetail'),count=document.getElementById('sfSyncCount');
  if(link){const online=st&&st.agent_online!==false;link.textContent=online?'接続中':'PC未接続';link.className='linkState '+(online?'online':'offline')}
  if(start){start.disabled=!!st?.running||st?.agent_online===false;start.textContent=st?.running?'検索中':'SMART FINDER検索開始'}
@@ -2165,12 +2213,13 @@ function confirmAdditionalFunds(amount,note=''){
  toast(`${yen(amt)}を追加資金として反映しました`);
 }
 
-window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog,exportFullBackup,chooseBackupRestore,readBackupRestoreFile,confirmBackupRestore,requestInvestmentMode,confirmInvestmentMode,addAdditionalFunds,confirmAdditionalFunds};
+window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog,exportFullBackup,chooseBackupRestore,readBackupRestoreFile,confirmBackupRestore,saveAutoSchedule,requestInvestmentMode,confirmInvestmentMode,addAdditionalFunds,confirmAdditionalFunds};
 window.addEventListener('message',e=>{if(e.data?.type==='SMART_FINDER_RESULTS'&&e.data.races)receive(e.data.races)});
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab,.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active');renderAll()});
 document.getElementById('editCandidates').onclick=()=>{editMode=!editMode;draftCandidates={...state.candidates};document.getElementById('unsaved').style.display='none';renderCandidates()};
 document.getElementById('saveCandidates').onclick=()=>showModal(`<h3>この内容で保存しますか？</h3><p class="note">使用：${Object.keys(draftCandidates).filter(k=>draftCandidates[k]).map(k=>candidateDefs[k].name).join(' / ')||'なし'}</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" id="doCandidateSave">保存する</button></div>`),document.addEventListener('click',e=>{if(e.target?.id==='doCandidateSave'){state.settingHistory.push({at:new Date().toISOString(),value:{...state.candidates}});state.settingHistory=state.settingHistory.slice(-3);state.candidates={...draftCandidates};editMode=false;save();closeModal();document.getElementById('unsaved').style.display='none';toast('SELECT設定を保存しました')}});
 document.getElementById('editMoney').onclick=()=>{moneyEdit=!moneyEdit;renderSettings()};document.getElementById('saveMoney').onclick=()=>{const old=state.startFunds,n=Number(document.getElementById('startFunds').value)||old;if(settled().length||state.races.some(r=>r.status==='結果待ち')){toast('運用開始後は開始資金を変更しません');moneyEdit=false;renderSettings();return}state.moneyHistory.push({at:new Date().toISOString(),old,new:n});state.startFunds=n;state.currentFunds=n;state.capital=[{at:new Date().toISOString(),value:n,type:'開始資金変更'}];moneyEdit=false;save();toast('資金設定を保存しました')};
+const saveScheduleBtn=document.getElementById('saveScheduleBtn');if(saveScheduleBtn)saveScheduleBtn.onclick=saveAutoSchedule;
 const modeAttackBtn=document.getElementById('modeAttackBtn');if(modeAttackBtn)modeAttackBtn.onclick=()=>requestInvestmentMode('attack');
 const modeDefenseBtn=document.getElementById('modeDefenseBtn');if(modeDefenseBtn)modeDefenseBtn.onclick=()=>requestInvestmentMode('defense');
 const addFundsBtn=document.getElementById('addFundsBtn');if(addFundsBtn)addFundsBtn.onclick=addAdditionalFunds;
