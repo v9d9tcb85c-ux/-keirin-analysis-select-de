@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.16.3 LIVE EXPOSURE STATS</title>
+<title>WINTICKET SMART FINDER SELECT / v3.17.0 MODE PERFORMANCE</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -209,6 +209,24 @@ body{background:
 .periodMetric .val{font-size:17px;font-weight:900;color:#edf6ff;line-height:1.2;word-break:break-word}
 .periodMetric .sub{font-size:8px;color:#879bb9;margin-top:3px}
 .periodMetric .val.plus{color:#5ce6a1}.periodMetric .val.minus{color:#ff6684}
+
+.modeCompareGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modeCompareCard{border:1px solid rgba(70,132,219,.32);border-radius:16px;background:linear-gradient(180deg,rgba(8,22,45,.96),rgba(5,13,31,.97));padding:14px;position:relative;overflow:hidden}
+.modeCompareCard.attack{border-color:rgba(255,174,53,.35)}
+.modeCompareCard.defense{border-color:rgba(72,197,255,.35)}
+.modeCompareCard.unknown{border-color:rgba(145,156,180,.28)}
+.modeCompareHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.modeCompareHead h3{margin:0;font-size:20px}
+.modeCompareHead .modeTag{font-size:9px;padding:5px 8px;border-radius:999px;border:1px solid rgba(91,143,217,.28);color:#a9bedc}
+.modeCompareMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.modeCompareMetric{border:1px solid rgba(61,111,191,.22);border-radius:11px;background:rgba(4,13,31,.72);padding:9px;min-width:0}
+.modeCompareMetric .lab{font-size:9px;color:#7f96ba;margin-bottom:4px}
+.modeCompareMetric .val{font-size:16px;font-weight:900;color:#edf6ff}
+.modeCompareMetric .val.plus{color:#5ce6a1}.modeCompareMetric .val.minus{color:#ff6684}
+.modeCompareMetric .sub{font-size:8px;color:#879bb9;margin-top:3px}
+.modeSummaryNote{margin-top:9px;color:#8da3c0;font-size:9px;line-height:1.55}
+@media(max-width:860px){.modeCompareGrid{grid-template-columns:1fr}.modeCompareMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 .recentDaysTable{width:100%;border-collapse:collapse;font-size:10px}
 .recentDaysTable th,.recentDaysTable td{padding:8px 7px;border-bottom:1px solid rgba(54,92,147,.24);text-align:right;white-space:nowrap}
 .recentDaysTable th:first-child,.recentDaysTable td:first-child{text-align:left}
@@ -1355,6 +1373,27 @@ body::after{
       <div class="note" style="margin-top:9px">損益・回収率は結果確定済みレースだけで計算します。購入総額・結果待ち投資では未確定分も別表示し、確定前に損失扱いしません。追加資金は利益に含めません。</div>
     </section>
 
+    <section class="section">
+      <div class="sectionHead"><h3><span>MODE PERFORMANCE</span> 攻め / 守り 成績比較</h3><span class="badge" id="modePerformanceBadge">実践購入ベース</span></div>
+      <div class="modeCompareGrid">
+        <div class="modeCompareCard attack">
+          <div class="modeCompareHead"><h3>🔥 攻め</h3><span class="modeTag">ATTACK</span></div>
+          <div class="modeCompareMetrics" id="attackModeStats"></div>
+        </div>
+        <div class="modeCompareCard defense">
+          <div class="modeCompareHead"><h3>🛡 守り</h3><span class="modeTag">DEFENSE</span></div>
+          <div class="modeCompareMetrics" id="defenseModeStats"></div>
+        </div>
+      </div>
+      <div class="modeSummaryNote" id="modePerformanceNote">購入時に保存された運用モードで集計します。結果待ちは購入額には含めますが、損益・回収率には含めません。</div>
+      <div class="modeCompareGrid" id="unknownModeWrap" style="margin-top:12px;display:none">
+        <div class="modeCompareCard unknown">
+          <div class="modeCompareHead"><h3>未記録</h3><span class="modeTag">LEGACY</span></div>
+          <div class="modeCompareMetrics" id="unknownModeStats"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="section"><div class="settingsCard"><h3 style="margin-top:0">直近7日の実践成績</h3><div style="overflow:auto"><table class="recentDaysTable"><thead><tr><th>日付</th><th>購入</th><th>確定</th><th>的中</th><th>投資</th><th>払戻</th><th>損益</th><th>回収率</th></tr></thead><tbody id="recentDailyRows"></tbody></table></div></div></section>
 
     <section class="section"><div class="settingsCard"><h3 style="margin-top:0">候補別成績</h3><div id="candidateStats" class="historyList"></div></div></section>
@@ -1816,6 +1855,52 @@ function periodMetricHtml(s){
  ];
  return items.map(x=>`<div class="periodMetric"><div class="lab">${x[0]}</div><div class="val ${x[3]}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
 }
+
+function statsForMode(mode){
+ const list=(state.races||[]).filter(r=>{
+   if(r.investmentConfirmed==null)return false;
+   const saved=r.investmentModeConfirmed;
+   if(mode==='unknown')return saved!=='attack'&&saved!=='defense';
+   return saved===mode;
+ });
+ return statsForRaceList(list);
+}
+function modeMetricHtml(s){
+ const items=[
+   ['購入',`${s.purchased}R`,s.pending?`待ち ${s.pending}R`:`確定 ${s.settled}R`,''],
+   ['購入総額',yen(s.purchasedInv),'結果待ち含む',''],
+   ['結果待ち',yen(s.pendingInv),s.pending?`${s.pending}R`:'なし',''],
+   ['的中',`${s.hits}R`,s.settled?`的中率 ${pct(s.hit)}`:'確定なし',''],
+   ['確定損益',`${s.pl>=0?'+':''}${yen(s.pl)}`,'確定済みのみ',s.pl>=0?'plus':'minus'],
+   ['回収率',s.inv?pct(s.roi):'—',s.inv?`確定投資 ${yen(s.inv)}`:'確定投資なし','']
+ ];
+ return items.map(x=>`<div class="modeCompareMetric"><div class="lab">${x[0]}</div><div class="val ${x[3]}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
+}
+function renderModePerformance(){
+ const attack=statsForMode('attack'),defense=statsForMode('defense'),unknown=statsForMode('unknown');
+ const a=document.getElementById('attackModeStats'),d=document.getElementById('defenseModeStats'),u=document.getElementById('unknownModeStats');
+ if(a)a.innerHTML=modeMetricHtml(attack);
+ if(d)d.innerHTML=modeMetricHtml(defense);
+ if(u)u.innerHTML=modeMetricHtml(unknown);
+
+ const uw=document.getElementById('unknownModeWrap');
+ if(uw)uw.style.display=unknown.purchased?'grid':'none';
+
+ const badge=document.getElementById('modePerformanceBadge');
+ if(badge)badge.textContent=`攻め ${attack.purchased}R / 守り ${defense.purchased}R${unknown.purchased?` / 未記録 ${unknown.purchased}R`:''}`;
+
+ const note=document.getElementById('modePerformanceNote');
+ if(note){
+   const aR=attack.inv?attack.roi:null,dR=defense.inv?defense.roi:null;
+   let tail='購入時に保存された運用モードで集計します。結果待ちは購入額には含めますが、損益・回収率には含めません。';
+   if(aR!==null&&dR!==null){
+     const diff=Math.abs(aR-dR);
+     tail+=` 現時点の確定回収率差は ${diff.toFixed(1)}pt。母数が少ない間は参考値として扱います。`;
+   }
+   note.textContent=tail;
+ }
+}
+
 function renderStats(){
  const s=settled(),inv=investedTotal(),pay=payoutTotal(),roi=inv?pay/inv*100:0,hit=s.length?hitCount()/s.length*100:0;
  const statsKpis=document.getElementById('statsKpis');
@@ -1831,6 +1916,8 @@ function renderStats(){
  if(dd)dd.textContent=today.replaceAll('-','/');
  if(md)md.textContent=month.slice(0,4)+'年'+month.slice(5)+'月';
  if(pb)pb.textContent=`今日 ${ds.purchased}R / 今月 ${ms.purchased}R`;
+
+ renderModePerformance();
 
  const recent=document.getElementById('recentDailyRows');
  if(recent){
