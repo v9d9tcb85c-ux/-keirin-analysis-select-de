@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.15.2 SCHEDULE INPUT FIX</title>
+<title>WINTICKET SMART FINDER SELECT / v3.16.0 DAILY MONTHLY STATS</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -196,6 +196,27 @@ body{background:
 .statusTitle{font-size:13px;color:#f5f1ff}.statusRow{padding:10px 0}.statusRow b{font-size:15px}.statusRow span{font-size:10px}.liveBadge,.statusRow>.badge{min-width:90px;justify-content:center;text-align:center;border-radius:10px}
 
 .neonDashboard{display:block}
+
+.periodStatsGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.periodStatsCard{border:1px solid rgba(67,128,218,.30);border-radius:16px;background:linear-gradient(180deg,rgba(8,22,45,.96),rgba(5,13,31,.97));padding:14px}
+.periodStatsHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
+.periodStatsHead small{display:block;color:#8399ba;font-size:9px;letter-spacing:.13em;font-weight:900}
+.periodStatsHead h3{margin:3px 0 0;font-size:20px}
+.periodStatsHead .periodDate{font-size:10px;color:#90a4c2;text-align:right}
+.periodMetricGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.periodMetric{border:1px solid rgba(61,111,191,.23);border-radius:11px;background:rgba(4,13,31,.72);padding:9px;min-width:0}
+.periodMetric .lab{font-size:9px;color:#7f96ba;margin-bottom:4px}
+.periodMetric .val{font-size:17px;font-weight:900;color:#edf6ff;line-height:1.2;word-break:break-word}
+.periodMetric .sub{font-size:8px;color:#879bb9;margin-top:3px}
+.periodMetric .val.plus{color:#5ce6a1}.periodMetric .val.minus{color:#ff6684}
+.recentDaysTable{width:100%;border-collapse:collapse;font-size:10px}
+.recentDaysTable th,.recentDaysTable td{padding:8px 7px;border-bottom:1px solid rgba(54,92,147,.24);text-align:right;white-space:nowrap}
+.recentDaysTable th:first-child,.recentDaysTable td:first-child{text-align:left}
+.recentDaysTable th{color:#7e95b8;font-size:9px}
+.recentDaysTable td{color:#dce9fb}
+.recentDaysTable .plus{color:#5ce6a1;font-weight:800}.recentDaysTable .minus{color:#ff6684;font-weight:800}
+@media(max-width:860px){.periodStatsGrid{grid-template-columns:1fr}.periodMetricGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 .syncStrip{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 10px;padding:8px 12px;border:1px solid rgba(61,109,255,.30);border-radius:12px;background:linear-gradient(90deg,rgba(5,14,36,.92),rgba(8,8,31,.92));box-shadow:inset 0 0 16px rgba(63,110,255,.07)}
 .syncStripLeft,.syncStripRight{display:flex;align-items:center;gap:8px}.syncStripLeft b{display:block;color:#a7f5ff;font-size:10px;letter-spacing:.13em}.syncStripLeft span:not(.syncDot){display:block;color:#aebade;font-size:9px;margin-top:2px}.syncDot{width:8px;height:8px;border-radius:50%;background:#43f7a2;box-shadow:0 0 10px #43f7a2}.syncStrip .btn{padding:7px 10px;font-size:10px;border-radius:8px}.syncStrip .badge,.syncStrip .linkState{font-size:9px}
 .dashboardGrid{display:grid;grid-template-columns:minmax(0,.98fr) minmax(0,1.05fr);gap:10px;align-items:stretch}
@@ -1317,7 +1338,25 @@ body::after{
   </main>
 
   <main id="stats" class="page">
-    <section class="heroPanel pageHero"><div class="pageHeroTitle"><div><div class="eyebrow">SMART FINDER PERFORMANCE</div><h2>運用統計</h2></div><div class="rule">本体の流れに沿って<br>候補別成績を集計</div></div><div class="kpis" id="statsKpis"></div></section>
+    <section class="heroPanel pageHero"><div class="pageHeroTitle"><div><div class="eyebrow">SMART FINDER PERFORMANCE</div><h2>運用統計</h2></div><div class="rule">実践購入データから<br>日次・月次・候補別成績を集計</div></div><div class="kpis" id="statsKpis"></div></section>
+
+    <section class="section">
+      <div class="sectionHead"><h3><span>PERFORMANCE</span> 今日 / 今月</h3><span class="badge" id="statsPeriodBadge">LIVE</span></div>
+      <div class="periodStatsGrid">
+        <div class="periodStatsCard">
+          <div class="periodStatsHead"><div><small>TODAY</small><h3>今日の成績</h3></div><div class="periodDate" id="dailyStatsDate">—</div></div>
+          <div class="periodMetricGrid" id="dailyStatsMetrics"></div>
+        </div>
+        <div class="periodStatsCard">
+          <div class="periodStatsHead"><div><small>THIS MONTH</small><h3>今月の成績</h3></div><div class="periodDate" id="monthlyStatsDate">—</div></div>
+          <div class="periodMetricGrid" id="monthlyStatsMetrics"></div>
+        </div>
+      </div>
+      <div class="note" style="margin-top:9px">損益・回収率は「結果確定済み」のレースだけで計算します。結果待ちは購入数には含めますが、確定前に損失扱いしません。追加資金・出入金は利益に含めません。</div>
+    </section>
+
+    <section class="section"><div class="settingsCard"><h3 style="margin-top:0">直近7日の実践成績</h3><div style="overflow:auto"><table class="recentDaysTable"><thead><tr><th>日付</th><th>購入</th><th>確定</th><th>的中</th><th>投資</th><th>払戻</th><th>損益</th><th>回収率</th></tr></thead><tbody id="recentDailyRows"></tbody></table></div></div></section>
+
     <section class="section"><div class="settingsCard"><h3 style="margin-top:0">候補別成績</h3><div id="candidateStats" class="historyList"></div></div></section>
   </main>
 
@@ -1748,31 +1787,71 @@ function renderOperation(){
  if(homeCount)homeCount.textContent=`${list.length}件`;
 }
 function renderHistory(){const list=[...state.races].sort((a,b)=>`${b.date}${b.startTime||''}`.localeCompare(`${a.date}${a.startTime||''}`));document.getElementById('allHistory').innerHTML=list.length?list.map(r=>raceHtml(r,false)).join(''):'<div class="empty">履歴なし</div>'}
-function renderStats(){const s=settled(),inv=investedTotal(),pay=payoutTotal(),roi=inv?pay/inv*100:0,hit=s.length?hitCount()/s.length*100:0;document.getElementById('statsKpis').innerHTML=[['確定レース',s.length+'R',''],['的中',hitCount()+'R',pct(hit)],['累計収支',`${profitTotal()>=0?'+':''}${yen(profitTotal())}`,''],['回収率',pct(roi),`払戻 ${yen(pay)}`]].map((x,i)=>`<div class="kpi"><div class="lab">${x[0]}</div><div class="val ${i===2?(profitTotal()>=0?'profit':'loss'):''}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
- document.getElementById('candidateStats').innerHTML=Object.keys(candidateDefs).map(id=>{const races=s.filter(r=>(r.candidates||[]).some(c=>c.id===id));let iv=0,pv=0,h=0;races.forEach(r=>{const c=(r.candidates||[]).find(x=>x.id===id);const totalPts=racePoints(r);const cp=Number(c?.points)||c?.bets?.length||1;const share=totalPts?cp/totalPts:0;iv+=(r.investmentConfirmed||0)*share;pv+=(r.payout||0)*share;if(r.status==='的中')h++});return `<div class="historyCard"><strong>${candidateDefs[id].name}</strong>　${races.length}R / 的中 ${h}R<br>参考投資 ${yen(iv)}　参考払戻 ${yen(pv)}　参考回収率 ${pct(iv?pv/iv*100:0)}</div>`}).join('')}
-function renderSettings(){document.getElementById('startFunds').value=String(state.startFunds);document.getElementById('currentFunds').value=state.currentFunds;document.getElementById('startFunds').disabled=!moneyEdit;document.getElementById('moneyLockState').textContent=moneyEdit?'🔓 資金設定変更中':'🔒 資金設定ロック中';document.getElementById('saveMoney').style.display=moneyEdit?'block':'none';const b=document.getElementById('testModeBtn'),s=document.getElementById('testModeState'),banner=document.getElementById('testBanner');if(b)b.textContent=testMode?'本番モードへ戻る':'安全テストモードを開始';if(s){const pc=purchased().length,sc=settled().length;s.innerHTML=testMode?`<b>テスト中</b>｜3件のテストレースで再計算確認。購入 ${pc}件 / 確定 ${sc}件。本番の購入・払戻・資金には反映されません。`:'本番モードです。テストを始めても現在の本番データは変更しません。'}if(banner)banner.classList.toggle('show',testMode);const fs=document.getElementById('additionalFundsSummary'),fh=document.getElementById('additionalFundsHistory');if(fs)fs.innerHTML=`追加資金累計：<b>${yen(totalAddedFunds())}</b>　｜　開始資金：${yen(state.startFunds)}　｜　現在資金：${yen(state.currentFunds)}`;if(fh){const arr=[...(state.fundingHistory||[])].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))).slice(0,8);fh.innerHTML=arr.length?arr.map(x=>`<div class="historyCard" style="padding:9px 11px"><div style="display:flex;justify-content:space-between;gap:8px"><b>+${yen(x.amount)}</b><span class="note">${esc(x.at?new Date(x.at).toLocaleString('ja-JP'):'')}</span></div>${x.note?`<div class="note" style="margin-top:4px">${esc(x.note)}</div>`:''}</div>`).join(''):'<div class="note">追加資金の履歴はまだありません。</div>';}const ma=document.getElementById('modeAttackBtn'),md=document.getElementById('modeDefenseBtn'),mb=document.getElementById('investmentModeBadge'),mde=document.getElementById('investmentModeDetail');if(ma){ma.classList.toggle('primary',state.investmentMode==='attack');ma.classList.toggle('save',false)}if(md){md.classList.toggle('primary',state.investmentMode==='defense')}if(mb)mb.textContent=`現在：${investmentModeLabel()}`;if(mde)mde.textContent=state.investmentMode==='attack'?'攻め：★★★ S＝1,000円/点、★★ A＝400円/点。★★★★ SPは従来の現在資金1.8%複利を使用します。':'守り：★★★★ SP＝現在資金1.8%、★★★ S＝0.9%、★★ A＝0.45%を100円単位で算出します。';}
-function renderAll(){renderHome();renderCandidates();renderOperation();renderHistory();renderStats();renderSettings()}
-function receive(races,options={}){if(!Array.isArray(races))races=[races];let added=0,merged=0,skipped=0;for(const raw of races){if(!raw||!raw.date||!raw.venue||raw.raceNo==null)continue;const key=keyOf(raw);let r=state.races.find(x=>x.key===key);const incoming=(raw.candidates||[]).filter(c=>state.candidates[c.id]!==false).map(c=>enrichCandidateStats({...c,id:c.id||c.ruleId||c.rule_id,points:Number(c.points)||((c.bets||[]).length)||1,bets:c.bets||candidateDefs[c.id]?.bets||[]},raw));if(!incoming.length){skipped++;continue}if(!r){r={key,date:raw.date,venue:raw.venue,raceNo:Number(raw.raceNo),grade:raw.grade||raw.classGrade||'',startTime:raw.startTime||'',timeBand:raw.timeBand||'',candidates:[],status:'投票待ち',createdAt:new Date().toISOString(),source:raw.source||'',line:raw.line||'',threeOrder:raw.threeOrder||'',bankGroup:raw.bankGroup||bankGroupOf(raw.venue),predictionUrl:raw.predictionUrl||'',shadowOos:raw.shadowOos||[]};state.races.push(r);added++}else merged++;for(const c of incoming){const ex=r.candidates.find(x=>x.id===c.id);if(!ex)r.candidates.push(c);else{Object.assign(ex,c);ex.bets=[...new Set([...(ex.bets||[]),...(c.bets||[])])];ex.points=Math.max(ex.points||0,c.points||0)}}r.shadowOos=raw.shadowOos||r.shadowOos||[];r.startTime=raw.startTime||r.startTime;r.timeBand=raw.timeBand||r.timeBand;r.grade=raw.grade||raw.classGrade||r.grade||'';r.line=raw.line||r.line||'';r.threeOrder=raw.threeOrder||r.threeOrder||'';r.bankGroup=raw.bankGroup||r.bankGroup||bankGroupOf(r.venue);r.predictionUrl=raw.predictionUrl||r.predictionUrl||'';r.source=raw.source||r.source||''}if(added||merged){localStorage.setItem(storageKey(),JSON.stringify(state));renderAll()}if(!options.silent)toast(`取込完了：新規 ${added} / 統合 ${merged}${skipped?` / 除外 ${skipped}`:''}`);return {added,merged,skipped}}
-function markBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;const rank=rankForRace(r),unit=unitForRank(state.currentFunds,rank),inv=unit*racePoints(r);if(state.currentFunds<inv){toast('現在資金が予定投資額を下回っています');return}showModal(`<h3>購入登録しますか？</h3><p class="note">${esc(r.venue)} ${r.raceNo}R<br>運用モード：<b>${investmentModeLabel()}</b><br>${rank}ランク：1点 ${yen(unit)} × ${racePoints(r)}点 = <b>${yen(inv)}</b><br>実際に購入したレースだけ登録してください。確定すると運用台帳へ追加し、現在資金から購入額を差し引きます。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn primary" onclick="SMART_SELECT.confirmBet('${esc(key)}')">確定</button></div>`)}
-function confirmBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;const rank=rankForRace(r),unit=unitForRank(state.currentFunds,rank),inv=unit*racePoints(r);r.rankConfirmed=rank;r.investmentModeConfirmed=state.investmentMode;r.unitConfirmed=unit;r.investmentConfirmed=inv;r.status='結果待ち';r.betAt=new Date().toISOString();recalculateOperations();appLog('PURCHASE_CONFIRMED',{key,mode:r.investmentModeConfirmed,rank:r.rankConfirmed,rate:COMPOUND_RATE[r.rankConfirmed],investment:inv,unitConfirmed:unit,funds:state.currentFunds});save();closeModal();toast(testMode?'テスト購入を運用台帳へ登録しました':'購入を運用台帳へ登録しました')}
-function openResult(key){const r=state.races.find(x=>x.key===key);if(!r)return;const unit=Number(r.unitConfirmed)||100;const mult=unit/100;showModal(`<h3>結果を反映</h3><p class="note">${esc(r.venue)} ${r.raceNo}R　投資 ${yen(r.investmentConfirmed||0)}<br>1点金額 ${yen(unit)}（WINTICKET確定払戻 × ${mult}倍）</p><div class="field"><label>WINTICKET確定払戻（100円）</label><input id="payoutInput" type="number" min="0" step="10" value="0" oninput="SMART_SELECT.updatePayoutPreview('${esc(key)}')"></div><div class="settingsCard" style="margin-top:10px"><div class="note">実際に受け取る払戻</div><div id="payoutPreview" style="font-size:28px;font-weight:900;margin-top:4px">${yen(0)}</div><div class="note">表示払戻 × ${mult}倍</div></div><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" onclick="SMART_SELECT.confirmResult('${esc(key)}')">払戻を確定</button></div>`)}
-function updatePayoutPreview(key){const r=state.races.find(x=>x.key===key),input=document.getElementById('payoutInput'),out=document.getElementById('payoutPreview');if(!r||!input||!out)return;const base=Math.max(0,Number(input.value)||0),unit=Number(r.unitConfirmed)||100,actual=Math.round(base*(unit/100));out.textContent=yen(actual)}
-function confirmResult(key){const r=state.races.find(x=>x.key===key),input=document.getElementById('payoutInput');if(!r||!input)return;const base=Math.max(0,Number(input.value)||0),unit=Number(r.unitConfirmed)||100,p=Math.round(base*(unit/100));r.payoutBase100=base;r.payout=p;r.status=p>0?'的中':'不的中';r.settledAt=new Date().toISOString();recalculateOperations();appLog('RESULT_CONFIRMED',{key,payoutBase100:base,unitConfirmed:unit,payout:p,profit:r.raceProfit,funds:state.currentFunds});save();closeModal();toast(testMode?'テスト結果を反映しました':'払戻・損益・現在資金を更新しました')}
+function localDateKey(d=new Date()){
+ const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+ return `${y}-${m}-${day}`;
+}
+function statsForRaceList(list){
+ const purchasedList=(list||[]).filter(r=>r.investmentConfirmed!=null);
+ const settledList=purchasedList.filter(r=>['的中','不的中'].includes(r.status));
+ const pendingList=purchasedList.filter(r=>!['的中','不的中'].includes(r.status));
+ const hits=settledList.filter(r=>r.status==='的中').length;
+ const inv=settledList.reduce((s,r)=>s+(Number(r.investmentConfirmed)||0),0);
+ const pay=settledList.reduce((s,r)=>s+(Number(r.payout)||0),0);
+ const pl=pay-inv;
+ const roi=inv?pay/inv*100:0;
+ const hit=settledList.length?hits/settledList.length*100:0;
+ return {purchased:purchasedList.length,settled:settledList.length,pending:pendingList.length,hits,inv,pay,pl,roi,hit};
+}
+function periodMetricHtml(s){
+ const items=[
+   ['購入',`${s.purchased}R`,`確定 ${s.settled} / 待ち ${s.pending}`,''],
+   ['的中',`${s.hits}R`,s.settled?`的中率 ${pct(s.hit)}`:'確定データなし',''],
+   ['確定投資',yen(s.inv),`結果確定済み ${s.settled}R`,''],
+   ['払戻',yen(s.pay),'確定払戻合計',''],
+   ['確定損益',`${s.pl>=0?'+':''}${yen(s.pl)}`,'追加資金は除外',s.pl>=0?'plus':'minus'],
+   ['回収率',s.inv?pct(s.roi):'—',s.inv?`払戻 ${yen(s.pay)}`:'確定投資なし','']
+ ];
+ return items.map(x=>`<div class="periodMetric"><div class="lab">${x[0]}</div><div class="val ${x[3]}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
+}
+function renderStats(){
+ const s=settled(),inv=investedTotal(),pay=payoutTotal(),roi=inv?pay/inv*100:0,hit=s.length?hitCount()/s.length*100:0;
+ document.getElementById('statsKpis').innerHTML=[['確定レース',s.length+'R',''],['的中',hitCount()+'R',pct(hit)],['累計収支',`${profitTotal()>=0?'+':''}${yen(profitTotal())}`,''],['回収率',pct(roi),`払戻 ${yen(pay)}`]].map((x,i)=>`<div class="kpi"><div class="lab">${x[0]}</div><div class="val ${i===2?(profitTotal()>=0?'profit':'loss'):''}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
 
-function openOperationEdit(key){
- const r=state.races.find(x=>x.key===key);if(!r||r.investmentConfirmed==null)return;
- const bets=raceBets(r).join('、'),settledNow=['的中','不的中'].includes(r.status);
- const base=(r.payoutBase100!=null?r.payoutBase100:(settledNow&&r.unitConfirmed?Math.round((Number(r.payout)||0)/(Number(r.unitConfirmed)/100)):0));
- showModal(`<h3>購入履歴を修正</h3><p class="note">${esc(r.date)} ${esc(r.venue)} ${esc(r.raceNo)}R<br>修正後、この行以降の累計損益・現在資金を自動再計算します。後続レースで実際に購入した金額は勝手に変更しません。</p>
- <div class="field"><label>買い目（複数は「、」区切り）</label><input id="editBets" value="${esc(bets)}"></div>
- <div class="field"><label>1点金額</label><input id="editUnit" type="number" min="100" step="100" value="${Number(r.unitConfirmed)||1000}"></div>
- <div class="field"><label>結果状態</label><select id="editResultState"><option value="pending" ${settledNow?'':'selected'}>結果待ち</option><option value="settled" ${settledNow?'selected':''}>結果確定</option></select></div>
- <div class="field"><label>WINTICKET確定払戻（100円）</label><input id="editPayoutBase" type="number" min="0" step="10" value="${Math.max(0,Number(base)||0)}"></div>
- <div class="field"><label>メモ</label><input id="editNote" value="${esc(r.manualNote||'')}" placeholder="任意"></div>
- <div class="settingsCard" style="margin-top:10px"><div class="note">購入額プレビュー</div><div id="editInvestmentPreview" style="font-size:28px;font-weight:900;margin-top:4px">${yen(Number(r.investmentConfirmed)||0)}</div><div class="note">1点金額 × 買い目数</div></div>
- <div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" onclick="SMART_SELECT.confirmOperationEdit('${esc(key)}')">修正を保存</button></div>`);
- const update=()=>{const count=Math.max(1,parseBetsText(document.getElementById('editBets')?.value||'').length),unit=Math.max(100,Number(document.getElementById('editUnit')?.value)||1000),out=document.getElementById('editInvestmentPreview');if(out)out.textContent=yen(count*unit)};
- document.getElementById('editBets').oninput=update;document.getElementById('editUnit').oninput=update;
+ const today=localDateKey(),month=today.slice(0,7);
+ const dailyList=(state.races||[]).filter(r=>String(r.date||'').slice(0,10)===today);
+ const monthlyList=(state.races||[]).filter(r=>String(r.date||'').slice(0,7)===month);
+ const ds=statsForRaceList(dailyList),ms=statsForRaceList(monthlyList);
+ const dm=document.getElementById('dailyStatsMetrics'),mm=document.getElementById('monthlyStatsMetrics');
+ const dd=document.getElementById('dailyStatsDate'),md=document.getElementById('monthlyStatsDate'),pb=document.getElementById('statsPeriodBadge');
+ if(dm)dm.innerHTML=periodMetricHtml(ds);
+ if(mm)mm.innerHTML=periodMetricHtml(ms);
+ if(dd)dd.textContent=today.replaceAll('-','/');
+ if(md)md.textContent=month.replace('-','年')+'月';
+ if(pb)pb.textContent=`今日 ${ds.purchased}R / 今月 ${ms.purchased}R`;
+
+ const recent=document.getElementById('recentDailyRows');
+ if(recent){
+   const rows=[];
+   for(let i=0;i<7;i++){
+     const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-i);
+     const key=localDateKey(d);
+     const x=statsForRaceList((state.races||[]).filter(r=>String(r.date||'').slice(0,10)===key));
+     const plCls=x.pl>=0?'plus':'minus';
+     rows.push(`<tr><td>${key.slice(5).replace('-','/')}</td><td>${x.purchased}R</td><td>${x.settled}R${x.pending?` +待${x.pending}`:''}</td><td>${x.hits}R</td><td>${yen(x.inv)}</td><td>${yen(x.pay)}</td><td class="${plCls}">${x.pl>=0?'+':''}${yen(x.pl)}</td><td>${x.inv?pct(x.roi):'—'}</td></tr>`);
+   }
+   recent.innerHTML=rows.join('');
+ }
+
+ document.getElementById('candidateStats').innerHTML=Object.keys(candidateDefs).map(id=>{
+   const races=s.filter(r=>(r.candidates||[]).some(c=>c.id===id));
+   let iv=0,pv=0,h=0;
+   races.forEach(r=>{
+     const c=(r.candidates||[]).find(x=>x.id===id),totalPts=racePoints(r),cp=Number(c?.points)||c?.bets?.length||1,share=totalPts?cp/totalPts:0;
+     iv+=(r.investmentConfirmed||0)*share;pv+=(r.payout||0)*share;if(r.status==='的中')h++
+   });
+   return `<div class="historyCard"><strong>${candidateDefs[id].name}</strong>　${races.length}R / 的中 ${h}R<br>参考投資 ${yen(iv)}　参考払戻 ${yen(pv)}　参考回収率 ${pct(iv?pv/iv*100:0)}</div>`
+ }).join('')
 }
 function confirmOperationEdit(key){
  const r=state.races.find(x=>x.key===key);if(!r)return;
