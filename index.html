@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.19.0 RESULT ORDER RESEARCH</title>
+<title>WINTICKET SMART FINDER SELECT / v3.20.0 MODE TIMELINE</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -1374,6 +1374,13 @@ body::after{
     </section>
 
     <section class="section">
+      <div class="sectionHead"><h3><span>MODE TIMELINE</span> 運用モード変更履歴</h3><span class="badge" id="modeTimelineBadge">0件</span></div>
+      <div class="settingsCard">
+        <p class="note">モード変更時の現在資金と、その変更後から次の変更までの実践成績を区間ごとに表示します。過去の未記録購入を推測で攻め・守りへ振り分けることはしません。</p>
+        <div id="modeTimelineList" class="historyList" style="margin-top:10px"></div>
+      </div>
+    </section>
+    <section class="section">
       <div class="sectionHead"><h3><span>MODE PERFORMANCE</span> 攻め / 守り 成績比較</h3><span class="badge" id="modePerformanceBadge">実践購入ベース</span></div>
       <div class="modeCompareGrid">
         <div class="modeCompareCard attack">
@@ -1831,7 +1838,7 @@ function raceHtml(r,isNext,accentIndex=0){
 }
 
 function renderCandidates(){document.getElementById('candidateList').classList.toggle('editing',editMode);document.getElementById('lockState').textContent=editMode?'🔓 変更モード':'🔒 設定ロック中';document.getElementById('editCandidates').textContent=editMode?'変更をやめる':'設定を変更する';document.getElementById('savedCount').textContent=`現在保存中 ${activeCandidateIds().length}条件`;document.getElementById('candidateList').innerHTML=Object.entries(candidateDefs).map(([id,d])=>`<div class="candidate"><div class="candTop"><div><h4>${d.name} <span class="badge ${d.status==='追試'?'gold':'green'}">${d.status}</span></h4><div class="candDesc">${d.subtitle}<br>${d.condition}</div></div><div class="toggle ${draftCandidates[id]?'on':''}" data-cand="${id}"><i></i></div></div><div class="tagRow">${d.bets.map(x=>`<span class="badge gold">${x}</span>`).join('')}</div><div class="candDesc" style="margin-top:8px">過去検証：${d.history}<br>${d.note}</div></div>`).join('');document.querySelectorAll('[data-cand]').forEach(e=>e.onclick=()=>{if(!editMode)return;const id=e.dataset.cand;draftCandidates[id]=!draftCandidates[id];e.classList.toggle('on',draftCandidates[id]);document.getElementById('unsaved').style.display=JSON.stringify(draftCandidates)!==JSON.stringify(state.candidates)?'flex':'none'});
- const hist=document.getElementById('settingHistory');if(hist){const rows=(state.settingHistory||[]).slice(-5).reverse();hist.innerHTML=rows.length?rows.map((h,i)=>{const idx=state.settingHistory.length-1-i;if(h&&h.value&&typeof h.value==='object'){const names=Object.keys(h.value).filter(k=>h.value[k]).map(k=>candidateDefs[k]?.name||k).join(' / ');return `<div class="historyCard"><strong>${new Date(h.at).toLocaleString('ja-JP')}</strong><br>${names||'SELECT設定'}<div class="actions"><button class="btn" onclick="SMART_SELECT.restoreSetting(${idx})">この設定へ戻す</button></div></div>`}if(h?.type==='investment_mode'){return `<div class="historyCard"><strong>${new Date(h.at).toLocaleString('ja-JP')}</strong><br>運用モード：${h.old==='attack'?'攻め':'守り'} → ${h.new==='attack'?'攻め':'守り'}</div>`}return `<div class="historyCard"><strong>${h?.at?new Date(h.at).toLocaleString('ja-JP'):'履歴'}</strong><br>設定変更</div>`}).join(''):'<div class="empty">保存履歴はまだありません</div>';}
+ const hist=document.getElementById('settingHistory');if(hist){const rows=(state.settingHistory||[]).slice(-5).reverse();hist.innerHTML=rows.length?rows.map((h,i)=>{const idx=state.settingHistory.length-1-i;if(h&&h.value&&typeof h.value==='object'){const names=Object.keys(h.value).filter(k=>h.value[k]).map(k=>candidateDefs[k]?.name||k).join(' / ');return `<div class="historyCard"><strong>${new Date(h.at).toLocaleString('ja-JP')}</strong><br>${names||'SELECT設定'}<div class="actions"><button class="btn" onclick="SMART_SELECT.restoreSetting(${idx})">この設定へ戻す</button></div></div>`}if(h?.type==='investment_mode'){return `<div class="historyCard"><strong>${new Date(h.at).toLocaleString('ja-JP')}</strong><br>運用モード：${h.old==='attack'?'攻め':'守り'} → ${h.new==='attack'?'攻め':'守り'}${Number.isFinite(Number(h.funds))?`<br><span class="note">変更時資金 ${yen(Number(h.funds))}</span>`:''}</div>`}return `<div class="historyCard"><strong>${h?.at?new Date(h.at).toLocaleString('ja-JP'):'履歴'}</strong><br>設定変更</div>`}).join(''):'<div class="empty">保存履歴はまだありません</div>';}
 }
 function renderOperation(){
  const list=[...purchased()].sort(operationSort);
@@ -1904,6 +1911,58 @@ function modeMetricHtml(s){
  ];
  return items.map(x=>`<div class="modeCompareMetric"><div class="lab">${x[0]}</div><div class="val ${x[3]}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
 }
+
+function modeTimelineEntries(){
+ const changes=(state.settingHistory||[])
+   .filter(h=>h&&h.type==='investment_mode'&&h.at)
+   .sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+ return changes.map((h,i)=>{
+   const startAt=String(h.at||'');
+   const endAt=i+1<changes.length?String(changes[i+1].at||''):'9999';
+   const mode=h.new==='attack'?'attack':'defense';
+   const rows=(state.races||[]).filter(r=>{
+     if(r.investmentConfirmed==null||r.investmentModeConfirmed!==mode)return false;
+     const at=String(r.betAt||'');
+     return at>=startAt&&at<endAt;
+   });
+   const stats=statsForRaceList(rows);
+   const savedFunds=Number(h.funds);
+   return {
+     h,mode,startAt,endAt,stats,
+     funds:Number.isFinite(savedFunds)?savedFunds:null
+   };
+ });
+}
+function renderModeTimeline(){
+ const host=document.getElementById('modeTimelineList');
+ const badge=document.getElementById('modeTimelineBadge');
+ if(!host||!badge)return;
+ const entries=modeTimelineEntries().slice().reverse();
+ badge.textContent=`${entries.length}件`;
+ if(!entries.length){
+   host.innerHTML='<div class="empty">運用モードの変更履歴はまだありません。</div>';
+   return;
+ }
+ host.innerHTML=entries.map(e=>{
+   const s=e.stats;
+   const from=e.h.old==='attack'?'攻め':'守り';
+   const to=e.mode==='attack'?'攻め':'守り';
+   const roi=s.inv?s.roi:null;
+   return `<div class="historyCard" style="padding:12px 13px">
+     <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
+       <div><strong>${esc(new Date(e.startAt).toLocaleString('ja-JP'))}</strong><br><span class="badge ${e.mode==='attack'?'gold':'green'}">${from} → ${to}</span></div>
+       <div class="note">変更時資金：<b>${e.funds==null?'—':yen(e.funds)}</b></div>
+     </div>
+     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px">
+       <div class="periodMetric"><div class="lab">購入</div><div class="val">${s.purchased}R</div><div class="sub">結果待ち ${s.pending}R</div></div>
+       <div class="periodMetric"><div class="lab">確定損益</div><div class="val ${s.pl>=0?'plus':'minus'}">${s.pl>=0?'+':''}${yen(s.pl)}</div><div class="sub">確定 ${s.settled}R</div></div>
+       <div class="periodMetric"><div class="lab">回収率</div><div class="val">${roi==null?'—':pct(roi)}</div><div class="sub">${s.inv?`確定投資 ${yen(s.inv)}`:'確定投資なし'}</div></div>
+       <div class="periodMetric"><div class="lab">的中</div><div class="val">${s.hits}R</div><div class="sub">${s.settled?`的中率 ${pct(s.hit)}`:'確定なし'}</div></div>
+     </div>
+   </div>`;
+ }).join('');
+}
+
 function renderModePerformance(){
  const attack=statsForMode('attack'),defense=statsForMode('defense'),unknown=statsForMode('unknown');
  const a=document.getElementById('attackModeStats'),d=document.getElementById('defenseModeStats'),u=document.getElementById('unknownModeStats');
@@ -1945,6 +2004,7 @@ function renderStats(){
  if(md)md.textContent=month.slice(0,4)+'年'+month.slice(5)+'月';
  if(pb)pb.textContent=`今日 ${ds.purchased}R / 今月 ${ms.purchased}R`;
 
+ renderModeTimeline();
  renderModePerformance();
 
  const recent=document.getElementById('recentDailyRows');
@@ -2448,7 +2508,7 @@ function confirmInvestmentMode(mode){
  if(old===mode){closeModal();return}
  state.investmentMode=mode;
  state.settingHistory=Array.isArray(state.settingHistory)?state.settingHistory:[];
- state.settingHistory.push({at:new Date().toISOString(),type:'investment_mode',old,new:mode});
+ state.settingHistory.push({at:new Date().toISOString(),type:'investment_mode',old,new:mode,funds:Number(state.currentFunds)||0});
  appLog('INVESTMENT_MODE_CHANGED',{old,new:mode,label:investmentModeLabel(mode),funds:state.currentFunds});
  save();closeModal();toast(`運用モードを「${investmentModeLabel(mode)}」へ変更しました`);
 }
