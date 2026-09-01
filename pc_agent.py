@@ -184,6 +184,11 @@ AUTO_MN_RECHECK_MAX = max(0, int(_local.get("AUTO_MN_RECHECK_MAX", "3") or "3"))
 # 2回目は M/D/N=09:30, MN=17:00 を既定とし config.txt で上書き可能。
 AUTO_MORNING_RECHECK_TIME = (_local.get("AUTO_MORNING_RECHECK_TIME", "09:30").strip() or "09:30")
 AUTO_MN_DAILY_RECHECK_TIME = (_local.get("AUTO_MN_DAILY_RECHECK_TIME", "17:00").strip() or "17:00")
+
+# v3.23: 指定時刻から大きく遅れて起動した場合は、その枠を後追い実行しない。
+# PC起動/ネット復帰の数分遅れだけ許容する。
+AUTO_SCHEDULE_GRACE_MINUTES = max(1, int(_local.get("AUTO_SCHEDULE_GRACE_MINUTES", "20") or "20"))
+
 if not _valid_hhmm(AUTO_MORNING_RECHECK_TIME):
     AUTO_MORNING_RECHECK_TIME = "09:30"
 if not _valid_hhmm(AUTO_MN_DAILY_RECHECK_TIME):
@@ -285,8 +290,6 @@ def _mark_slot_completed(command_id):
     if not cid.startswith("AUTO-"):
         return
     key=cid[5:]
-    if "_RECHECK_" in key:
-        return
     rec=_schedule_state.setdefault(key,{})
     rec["completed_at"]=datetime.now().isoformat(timespec="seconds")
     _save_schedule_state()
@@ -295,6 +298,16 @@ def _hhmm_reached(hhmm, now):
     try:
         hh, mm = [int(x) for x in hhmm.split(":", 1)]
         return (now.hour, now.minute) >= (hh, mm)
+    except Exception:
+        return False
+
+def _hhmm_due_within(hhmm, now, grace_minutes=AUTO_SCHEDULE_GRACE_MINUTES):
+    """指定時刻から grace_minutes 分以内だけ実行を許可する。日をまたぐ後追いはしない。"""
+    try:
+        hh, mm = [int(x) for x in str(hhmm).split(":", 1)]
+        scheduled = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+        delta = (now - scheduled).total_seconds()
+        return 0 <= delta <= max(1, int(grace_minutes)) * 60
     except Exception:
         return False
 
@@ -454,7 +467,7 @@ def check_auto_schedule():
     # The configured HH:MM is part of the slot identity.
     # Example: a completed 07:00 slot does not block a newly configured 18:35 slot.
     morning_key = _scheduled_slot_key(day, "MDN", AUTO_MORNING_TIME)
-    if _hhmm_reached(AUTO_MORNING_TIME, now) and _slot_start_allowed(morning_key, now):
+    if _hhmm_due_within(AUTO_MORNING_TIME, now) and _slot_start_allowed(morning_key, now):
         _schedule_state[morning_key] = {
             "started_at": now.isoformat(timespec="seconds"),
             "configured_time": AUTO_MORNING_TIME,
@@ -469,7 +482,7 @@ def check_auto_schedule():
 
     # 朝の再確認：M/D/N。新しく増えた候補だけ追加メール。
     morning_recheck_key = _scheduled_slot_key(day, "MDN_RECHECK", AUTO_MORNING_RECHECK_TIME)
-    if _hhmm_reached(AUTO_MORNING_RECHECK_TIME, now) and _slot_start_allowed(morning_recheck_key, now):
+    if _hhmm_due_within(AUTO_MORNING_RECHECK_TIME, now) and _slot_start_allowed(morning_recheck_key, now):
         _schedule_state[morning_recheck_key] = {
             "started_at": now.isoformat(timespec="seconds"),
             "configured_time": AUTO_MORNING_RECHECK_TIME,
@@ -484,7 +497,7 @@ def check_auto_schedule():
 
     # MN
     mn_key = _scheduled_slot_key(day, "MN", AUTO_MN_TIME)
-    if _hhmm_reached(AUTO_MN_TIME, now) and _slot_start_allowed(mn_key, now):
+    if _hhmm_due_within(AUTO_MN_TIME, now) and _slot_start_allowed(mn_key, now):
         _schedule_state[mn_key] = {
             "started_at": now.isoformat(timespec="seconds"),
             "configured_time": AUTO_MN_TIME,
@@ -499,7 +512,7 @@ def check_auto_schedule():
 
     # MNの固定再確認：新しく増えた候補だけ追加メール。
     mn_daily_recheck_key = _scheduled_slot_key(day, "MN_DAILY_RECHECK", AUTO_MN_DAILY_RECHECK_TIME)
-    if _hhmm_reached(AUTO_MN_DAILY_RECHECK_TIME, now) and _slot_start_allowed(mn_daily_recheck_key, now):
+    if _hhmm_due_within(AUTO_MN_DAILY_RECHECK_TIME, now) and _slot_start_allowed(mn_daily_recheck_key, now):
         _schedule_state[mn_daily_recheck_key] = {
             "started_at": now.isoformat(timespec="seconds"),
             "configured_time": AUTO_MN_DAILY_RECHECK_TIME,
@@ -949,8 +962,8 @@ def check_mn_recheck():
     start_job(run_scheduled_search, f"MN再確認{count+1}", {"MN"}, command_id)
     wake_render_async(f"MN再確認{count+1}")
 
-print("[AUTO] schedule slot logic v3.22.0 (AUTO slug fix + daily second-pass recheck)", flush=True)
-print(f"[AUTO] active schedule morning={AUTO_MORNING_TIME} M/D/N | morning recheck={AUTO_MORNING_RECHECK_TIME} M/D/N | mn={AUTO_MN_TIME} MN | mn recheck={AUTO_MN_DAILY_RECHECK_TIME} MN", flush=True)
+print("[AUTO] schedule slot logic v3.23.0 (slug fix + recheck + no late catch-up)", flush=True)
+print(f"[AUTO] active schedule morning={AUTO_MORNING_TIME} M/D/N | morning recheck={AUTO_MORNING_RECHECK_TIME} M/D/N | mn={AUTO_MN_TIME} MN | mn recheck={AUTO_MN_DAILY_RECHECK_TIME} MN | grace={AUTO_SCHEDULE_GRACE_MINUTES}min", flush=True)
 print("[AGENT] PC relay agent started", SERVER_URL, flush=True)
 print("[AGENT] config loaded OK", flush=True)
 print("[AGENT] mail-agent exclusive lock OK (other Python tools can coexist)", flush=True)
