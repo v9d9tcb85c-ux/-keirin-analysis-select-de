@@ -1,7 +1,7 @@
-﻿from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 from pathlib import Path
 from threading import Lock
-import os, time, uuid
+import os, time, uuid, json
 
 app = Flask(__name__)
 BASE = Path(__file__).resolve().parent
@@ -9,6 +9,38 @@ lock = Lock()
 
 AGENT_TOKEN = os.environ.get("AGENT_TOKEN", "").strip()
 CONTROL_KEY = os.environ.get("CONTROL_KEY", "").strip()
+
+CLIENT_STATE_FILE = Path(os.environ.get("CLIENT_STATE_PATH", str(BASE / "client_state.json")))
+CLIENT_STATE_MAX_BYTES = 5 * 1024 * 1024
+client_state = {
+    "revision": 0,
+    "updated_at": 0.0,
+    "source": "",
+    "payload": None,
+}
+
+def _load_client_state_file():
+    try:
+        if CLIENT_STATE_FILE.exists():
+            raw = json.loads(CLIENT_STATE_FILE.read_text(encoding="utf-8-sig"))
+            if isinstance(raw, dict) and isinstance(raw.get("payload"), dict):
+                client_state["revision"] = int(raw.get("revision") or 0)
+                client_state["updated_at"] = float(raw.get("updated_at") or 0.0)
+                client_state["source"] = str(raw.get("source") or "")
+                client_state["payload"] = raw.get("payload")
+    except Exception as e:
+        print("[CLIENT_SYNC] load failed", type(e).__name__, e, flush=True)
+
+def _save_client_state_file():
+    try:
+        CLIENT_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = CLIENT_STATE_FILE.with_suffix(CLIENT_STATE_FILE.suffix + ".tmp")
+        tmp.write_text(json.dumps(client_state, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(CLIENT_STATE_FILE)
+    except Exception as e:
+        print("[CLIENT_SYNC] save failed", type(e).__name__, e, flush=True)
+
+_load_client_state_file()
 
 state = {
     "agent_online": False,
@@ -88,6 +120,55 @@ def index():
 @app.get("/api/status")
 def status():
     return jsonify(public_state())
+
+@app.get("/api/client-state")
+def get_client_state():
+    with lock:
+        payload = client_state.get("payload")
+        return jsonify(
+            ok=True,
+            exists=isinstance(payload, dict),
+            revision=int(client_state.get("revision") or 0),
+            updated_at=float(client_state.get("updated_at") or 0.0),
+            source=str(client_state.get("source") or ""),
+            payload=payload if isinstance(payload, dict) else None,
+        )
+
+@app.post("/api/client-state")
+def set_client_state():
+    if not control_ok():
+        return jsonify(ok=False, reason="unauthorized"), 401
+    raw = request.get_data(cache=True)
+    if len(raw) > CLIENT_STATE_MAX_BYTES:
+        return jsonify(ok=False, reason="too_large"), 413
+    body = request.get_json(silent=True) or {}
+    payload = body.get("payload")
+    if not isinstance(payload, dict):
+        return jsonify(ok=False, reason="invalid_payload"), 400
+    base_revision = int(body.get("base_revision") or 0)
+    source = str(body.get("source") or "")[:120]
+
+    with lock:
+        current_revision = int(client_state.get("revision") or 0)
+        # 古い端末が、すでに更新済みの共通状態を上書きしないよう競合を拒否する。
+        if current_revision and base_revision != current_revision:
+            return jsonify(
+                ok=False,
+                reason="revision_conflict",
+                revision=current_revision,
+                updated_at=float(client_state.get("updated_at") or 0.0),
+            ), 409
+
+        client_state["revision"] = current_revision + 1
+        client_state["updated_at"] = now()
+        client_state["source"] = source
+        client_state["payload"] = payload
+        _save_client_state_file()
+        return jsonify(
+            ok=True,
+            revision=int(client_state["revision"]),
+            updated_at=float(client_state["updated_at"]),
+        )
 
 
 def valid_hhmm(s):

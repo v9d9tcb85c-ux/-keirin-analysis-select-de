@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.20.0 MODE TIMELINE</title>
+<title>WINTICKET SMART FINDER SELECT / v3.21.0 DEVICE SYNC</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -1467,6 +1467,13 @@ body::after{
       <p class="note">この版は本番モードで開始します。購入・結果・修正・取消・SMART FINDER取込などの操作ログをブラウザ内に最大2,000件保存し、本番状態は日ごとに最大7日分の復旧用スナップショットを保持します。</p>
       <div class="actions"><button class="btn primary" id="exportLiveLogBtn">運用ログを書き出す</button><span class="badge green">実稼働検証中</span></div>
     </div></section>
+    <section class="section"><div class="sectionHead"><h3><span>DEVICE SYNC</span> PC / iPhone 共通データ</h3><span class="badge" id="deviceSyncBadge">未接続</span></div><div class="settingsCard">
+      <p class="note">資金・購入履歴・結果・追加資金・出金・実着順・攻め/守りをRender経由で共通化します。通信できない時は端末内データをそのまま使用します。</p>
+      <div class="note" id="deviceSyncSummary">初回は、現在の正しいデータが入っているPCを先に開いて共通データを作成してください。その後iPhoneを開くと同じ状態を取得します。</div>
+      <div class="actions" style="margin-top:9px">
+        <button class="btn primary" id="deviceSyncNowBtn">今すぐ同期</button>
+      </div>
+    </div></section>
     <section class="section"><div class="sectionHead"><h3><span>SAFE BACKUP</span> 実践データ保全</h3></div><div class="settingsCard">
       <p class="note">購入履歴・払戻・追加資金・出金・資金推移・SELECT設定を1ファイルへ保存します。index.htmlを更新する前の保険として使えます。検索取得ロジックには触れません。</p>
       <div class="actions"><button class="btn save" id="fullBackupBtn">実践データをバックアップ</button><button class="btn" id="restoreBackupBtn">バックアップから復元</button><input id="restoreBackupFile" type="file" accept="application/json,.json" style="display:none"></div>
@@ -1496,6 +1503,16 @@ const TEST_SESSION_KEY='smartFinderSelect_v08_test_mode';
 sessionStorage.removeItem(TEST_SESSION_KEY);
 let testMode=false;
 const storageKey=()=>testMode?TEST_KEY:KEY;
+const DEVICE_ID_KEY='smartFinderSelect_device_id';
+let deviceId=localStorage.getItem(DEVICE_ID_KEY)||'';
+if(!deviceId){deviceId=`dev-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;localStorage.setItem(DEVICE_ID_KEY,deviceId)}
+let cloudRevision=0;
+let cloudBusy=false;
+let cloudPushTimer=null;
+let cloudLastAt=0;
+let cloudLastError='';
+let cloudInitialized=false;
+let cloudSuppressPush=false;
 function appLog(event,detail={}){try{const row={ts:new Date().toISOString(),mode:testMode?'TEST':'LIVE',event,detail};const logs=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');logs.push(row);localStorage.setItem(LOG_KEY,JSON.stringify(logs.slice(-2000)));console.log('[SELECT]',row)}catch(e){console.warn('[SELECT][LOG_FAIL]',e)}}
 const PROFIT_RULES=[{"rule_id":"ALL-001","active":true,"bet_type":"3連単","line":"3.3.1","layout":"○◎△.他×他.他","bet_pattern":"○◎×","points":1,"base_decision":"CHECK","stars":"★★","N":45,"roi":2.511111,"roi_ex_top1":1.897778},{"rule_id":"ALL-002","active":true,"bet_type":"3連単","line":"3.2.2","layout":"○◎△.×他.他他","bet_pattern":"○◎他","points":3,"base_decision":"CHECK","stars":"★★","N":86,"roi":2.553488,"roi_ex_top1":1.611628},{"rule_id":"ALL-003","active":true,"bet_type":"3連単","line":"3.2.2","layout":"◎○△.×他.他他","bet_pattern":"◎△○","points":1,"base_decision":"BET","stars":"★★★","N":119,"roi":1.929412,"roi_ex_top1":1.594958},{"rule_id":"ALL-004","active":true,"bet_type":"3連単","line":"3.2.2","layout":"◎○×.△他.他他","bet_pattern":"△◎○","points":1,"base_decision":"CHECK","stars":"★★","N":149,"roi":2.049664,"roi_ex_top1":1.480537},{"rule_id":"ALL-005","active":true,"bet_type":"3連単","line":"3.3.1","layout":"○◎△.×他他.他","bet_pattern":"◎△○","points":1,"base_decision":"CHECK","stars":"★★","N":51,"roi":1.435294,"roi_ex_top1":1.156863},{"rule_id":"ALL-006","active":true,"bet_type":"3連単","line":"3.2.2","layout":"◎○他.△×.他他","bet_pattern":"◎他○","points":3,"base_decision":"CHECK","stars":"★★","N":87,"roi":1.824521,"roi_ex_top1":1.077778},{"rule_id":"ALL-007","active":true,"bet_type":"3連単","line":"3.2.2","layout":"○◎×.△他.他他","bet_pattern":"○◎△","points":1,"base_decision":"CHECK","stars":"★★","N":58,"roi":1.937931,"roi_ex_top1":1.005172},{"rule_id":"ALL-008","active":true,"bet_type":"3連単","line":"3.2.2","layout":"◎○△.他×.他他","bet_pattern":"◎○他","points":3,"base_decision":"CHECK","stars":"★★","N":122,"roi":1.268306,"roi_ex_top1":1.036339},{"rule_id":"ALL-009","active":true,"bet_type":"3連単","line":"3.2.2","layout":"○◎△.×他.他他","bet_pattern":"○◎×","points":1,"base_decision":"CHECK","stars":"★★","N":86,"roi":1.423256,"roi_ex_top1":1.031395},{"rule_id":"ALL-010","active":true,"bet_type":"3連単","line":"3.2.2","layout":"◎○△.他他.×他","bet_pattern":"◎○×","points":1,"base_decision":"CHECK","stars":"★★","N":73,"roi":1.238356,"roi_ex_top1":1.053425},{"rule_id":"OTH-001","active":true,"bet_type":"2車複","line":"3.3.1","layout":"○◎×.他△他.他","bet_pattern":"○△","points":1,"base_decision":"BET","stars":"★★★","N":43,"roi":2.648837,"roi_ex_top1":2.037209},{"rule_id":"OTH-002","active":true,"bet_type":"3連複","line":"3.3.1","layout":"○◎×.他△他.他","bet_pattern":"○△他","points":3,"base_decision":"CHECK","stars":"★★","N":43,"roi":2.87907,"roi_ex_top1":1.927132},{"rule_id":"OTH-003","active":true,"bet_type":"ワイド","line":"3.2.1.1","layout":"◎○△.×他.他.他","bet_pattern":"他他","points":3,"base_decision":"CHECK","stars":"★★","N":42,"roi":2.080159,"roi_ex_top1":1.584921},{"rule_id":"OTH-004","active":true,"bet_type":"2車単","line":"3.2.2","layout":"○◎△.×他.他他","bet_pattern":"○◎","points":1,"base_decision":"BET","stars":"★★★","N":86,"roi":1.4,"roi_ex_top1":1.268605},{"rule_id":"OTH-005","active":true,"bet_type":"ワイド","line":"3.2.1.1","layout":"◎○△.×他.他.他","bet_pattern":"×他","points":3,"base_decision":"CHECK","stars":"★★","N":42,"roi":1.597619,"roi_ex_top1":1.177778},{"rule_id":"OTH-006","active":true,"bet_type":"3連複","line":"3.2.2","layout":"○◎×.△他.他他","bet_pattern":"◎○他","points":3,"base_decision":"CHECK","stars":"★★","N":58,"roi":1.390805,"roi_ex_top1":1.127586},{"rule_id":"OTH-007","active":true,"bet_type":"2車単","line":"3.2.2","layout":"◎○×.△他.他他","bet_pattern":"◎×","points":1,"base_decision":"CHECK","stars":"★★","N":149,"roi":1.432886,"roi_ex_top1":1.121477},{"rule_id":"OTH-008","active":true,"bet_type":"2車単","line":"3.2.2","layout":"◎○△.×他.他他","bet_pattern":"◎△","points":1,"base_decision":"CHECK","stars":"★★","N":119,"roi":1.637815,"roi_ex_top1":1.113445},{"rule_id":"OTH-009","active":true,"bet_type":"2車単","line":"3.2.2","layout":"◎○他.△×.他他","bet_pattern":"△×","points":1,"base_decision":"CHECK","stars":"★★","N":87,"roi":1.55977,"roi_ex_top1":1.098851},{"rule_id":"OTH-010","active":true,"bet_type":"3連複","line":"3.3.1","layout":"○◎△.×他他.他","bet_pattern":"◎○△","points":1,"base_decision":"BET","stars":"★★★","N":51,"roi":1.196078,"roi_ex_top1":1.084314},{"rule_id":"OTH-011","active":true,"bet_type":"2車単","line":"3.2.2","layout":"◎○×.△他.他他","bet_pattern":"△◎","points":1,"base_decision":"CHECK","stars":"★★","N":149,"roi":1.418121,"roi_ex_top1":1.071812},{"rule_id":"OTH-012","active":true,"bet_type":"ワイド","line":"3.3.1","layout":"○◎△.×他他.他","bet_pattern":"○△","points":1,"base_decision":"BET","stars":"★★★","N":51,"roi":1.121569,"roi_ex_top1":1.052941},{"rule_id":"OTH-013","active":true,"bet_type":"2車複","line":"3.2.2","layout":"◎○△.×他.他他","bet_pattern":"◎△","points":1,"base_decision":"CHECK","stars":"★★","N":119,"roi":1.267227,"roi_ex_top1":1.046218},{"rule_id":"OTH-014","active":true,"bet_type":"2車単","line":"3.3.1","layout":"◎○×.他△他.他","bet_pattern":"◎○","points":1,"base_decision":"CHECK","stars":"★★","N":69,"roi":1.121739,"roi_ex_top1":1.030435},{"rule_id":"OTH-015","active":true,"bet_type":"2車単","line":"3.2.2","layout":"◎○△.×他.他他","bet_pattern":"◎他","points":3,"base_decision":"CHECK","stars":"★★","N":119,"roi":1.459944,"roi_ex_top1":1.019608},{"rule_id":"OTH-016","active":true,"bet_type":"ワイド","line":"4.3","layout":"◎○△他.他×他","bet_pattern":"◎△","points":1,"base_decision":"CHECK","stars":"★★","N":74,"roi":1.054054,"roi_ex_top1":1.002703},{"rule_id":"OTH-017","active":true,"bet_type":"2車単","line":"3.2.2","layout":"◎○他.△×.他他","bet_pattern":"◎他","points":3,"base_decision":"CHECK","stars":"★★","N":87,"roi":1.286973,"roi_ex_top1":0.962835}];
 const GROUP_MODIFIERS=[{"modifier_id":"T3-GM-001","all_rule_id":"ALL-002","group":"G1","weight":"参考","N":22,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-002","all_rule_id":"ALL-002","group":"G2","weight":"参考","N":15,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-003","all_rule_id":"ALL-002","group":"G3","weight":"参考","N":16,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-004","all_rule_id":"ALL-002","group":"G4","weight":"参考","N":25,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-005","all_rule_id":"ALL-003","group":"G3","weight":"重視","N":42,"action":"KEEP","final_decision":"BET","note":"N>=30：BET維持"},{"modifier_id":"T3-GM-006","all_rule_id":"ALL-003","group":"G4","weight":"重視","N":35,"action":"DOWN1","final_decision":"CHECK","note":"N>=30：場Gで弱くBET→CHECK"},{"modifier_id":"T3-GM-007","all_rule_id":"ALL-004","group":"G1","weight":"参考","N":29,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-008","all_rule_id":"ALL-004","group":"G2","weight":"参考","N":24,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-009","all_rule_id":"ALL-004","group":"G3","weight":"重視","N":37,"action":"KEEP","final_decision":"CHECK","note":"N>=30：CHECK維持"},{"modifier_id":"T3-GM-010","all_rule_id":"ALL-004","group":"G4","weight":"重視","N":53,"action":"DOWN1","final_decision":"SKIP","note":"N>=30：場Gで弱くCHECK→SKIP"},{"modifier_id":"T3-GM-011","all_rule_id":"ALL-005","group":"G4","weight":"参考","N":16,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-012","all_rule_id":"ALL-006","group":"G1","weight":"参考","N":17,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-013","all_rule_id":"ALL-006","group":"G3","weight":"参考","N":23,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-014","all_rule_id":"ALL-006","group":"G4","weight":"重視","N":31,"action":"DOWN1","final_decision":"SKIP","note":"N>=30：場Gで弱くCHECK→SKIP"},{"modifier_id":"T3-GM-015","all_rule_id":"ALL-007","group":"G3","weight":"参考","N":19,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-016","all_rule_id":"ALL-008","group":"G1","weight":"参考","N":18,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-017","all_rule_id":"ALL-008","group":"G2","weight":"参考","N":21,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-018","all_rule_id":"ALL-008","group":"G3","weight":"重視","N":35,"action":"KEEP","final_decision":"CHECK","note":"N>=30：CHECK維持"},{"modifier_id":"T3-GM-019","all_rule_id":"ALL-008","group":"G4","weight":"重視","N":43,"action":"KEEP","final_decision":"CHECK","note":"N>=30：CHECK維持"},{"modifier_id":"T3-GM-020","all_rule_id":"ALL-009","group":"G1","weight":"参考","N":22,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-021","all_rule_id":"ALL-009","group":"G2","weight":"参考","N":15,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-022","all_rule_id":"ALL-009","group":"G3","weight":"参考","N":16,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-023","all_rule_id":"ALL-009","group":"G4","weight":"参考","N":25,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-024","all_rule_id":"ALL-010","group":"G1","weight":"参考","N":16,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-025","all_rule_id":"ALL-010","group":"G3","weight":"参考","N":20,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"T3-GM-026","all_rule_id":"ALL-010","group":"G4","weight":"参考","N":22,"action":"KEEP","final_decision":"CHECK","note":"15-29R：参考表示のみ。ALL判定を優先"},{"modifier_id":"OTH-GM-001","all_rule_id":"OTH-004","group":"G1","weight":"参考","N":22,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"BET"},{"modifier_id":"OTH-GM-002","all_rule_id":"OTH-004","group":"G2","weight":"参考","N":15,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"BET"},{"modifier_id":"OTH-GM-003","all_rule_id":"OTH-004","group":"G3","weight":"参考","N":16,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"BET"},{"modifier_id":"OTH-GM-004","all_rule_id":"OTH-004","group":"G4","weight":"参考","N":25,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"BET"},{"modifier_id":"OTH-GM-005","all_rule_id":"OTH-006","group":"G3","weight":"参考","N":19,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-006","all_rule_id":"OTH-007","group":"G1","weight":"参考","N":29,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"SKIP"},{"modifier_id":"OTH-GM-007","all_rule_id":"OTH-007","group":"G2","weight":"参考","N":24,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-008","all_rule_id":"OTH-007","group":"G3","weight":"重視","N":37,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"SKIP"},{"modifier_id":"OTH-GM-009","all_rule_id":"OTH-007","group":"G4","weight":"重視","N":53,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"SKIP"},{"modifier_id":"OTH-GM-010","all_rule_id":"OTH-008","group":"G3","weight":"重視","N":42,"action":"UP/KEEP","note":"ALL先行の場G補正","final_decision":"BET"},{"modifier_id":"OTH-GM-011","all_rule_id":"OTH-008","group":"G4","weight":"重視","N":35,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"SKIP"},{"modifier_id":"OTH-GM-012","all_rule_id":"OTH-009","group":"G1","weight":"参考","N":17,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"SKIP"},{"modifier_id":"OTH-GM-013","all_rule_id":"OTH-009","group":"G3","weight":"参考","N":23,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"SKIP"},{"modifier_id":"OTH-GM-014","all_rule_id":"OTH-009","group":"G4","weight":"重視","N":31,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-015","all_rule_id":"OTH-010","group":"G4","weight":"参考","N":16,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"BET"},{"modifier_id":"OTH-GM-016","all_rule_id":"OTH-011","group":"G1","weight":"参考","N":29,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"SKIP"},{"modifier_id":"OTH-GM-017","all_rule_id":"OTH-011","group":"G2","weight":"参考","N":24,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-018","all_rule_id":"OTH-011","group":"G3","weight":"重視","N":37,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-019","all_rule_id":"OTH-011","group":"G4","weight":"重視","N":53,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"SKIP"},{"modifier_id":"OTH-GM-020","all_rule_id":"OTH-012","group":"G4","weight":"参考","N":16,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-021","all_rule_id":"OTH-013","group":"G3","weight":"重視","N":42,"action":"UP/KEEP","note":"ALL先行の場G補正","final_decision":"BET"},{"modifier_id":"OTH-GM-022","all_rule_id":"OTH-013","group":"G4","weight":"重視","N":35,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"SKIP"},{"modifier_id":"OTH-GM-023","all_rule_id":"OTH-014","group":"G4","weight":"重視","N":30,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-024","all_rule_id":"OTH-015","group":"G3","weight":"重視","N":42,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"SKIP"},{"modifier_id":"OTH-GM-025","all_rule_id":"OTH-015","group":"G4","weight":"重視","N":35,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-026","all_rule_id":"OTH-016","group":"G1","weight":"参考","N":17,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-027","all_rule_id":"OTH-016","group":"G3","weight":"参考","N":15,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-028","all_rule_id":"OTH-016","group":"G4","weight":"参考","N":27,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-029","all_rule_id":"OTH-017","group":"G1","weight":"参考","N":17,"action":"DOWN1","note":"ALL先行の場G補正","final_decision":"SKIP"},{"modifier_id":"OTH-GM-030","all_rule_id":"OTH-017","group":"G3","weight":"参考","N":23,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"},{"modifier_id":"OTH-GM-031","all_rule_id":"OTH-017","group":"G4","weight":"重視","N":31,"action":"KEEP","note":"ALL先行の場G補正","final_decision":"CHECK"}];
@@ -1634,6 +1651,7 @@ function persistState(){
     if(!idx.includes(kd))localStorage.removeItem(k);
    });
   }catch(e){console.warn('[SELECT][SNAPSHOT_FAIL]',e)}
+  if(cloudInitialized&&!cloudSuppressPush)queueCloudPush();
  }
 }
 function save(){persistState();renderAll()}
@@ -2036,7 +2054,7 @@ if(wh){
  const warr=[...(state.withdrawalHistory||[])].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))).slice(0,8);
  wh.innerHTML=warr.length?warr.map(x=>`<div class="historyCard" style="padding:9px 11px"><div style="display:flex;justify-content:space-between;gap:8px"><b>-${yen(x.amount)}</b><span class="note">${esc(x.at?new Date(x.at).toLocaleString('ja-JP'):'')}</span></div>${x.note?`<div class="note" style="margin-top:4px">${esc(x.note)}</div>`:''}</div>`).join(''):'<div class="note">出金履歴はまだありません。</div>';
 }
-const ma=document.getElementById('modeAttackBtn'),md=document.getElementById('modeDefenseBtn'),mb=document.getElementById('investmentModeBadge'),mde=document.getElementById('investmentModeDetail');if(ma){ma.classList.toggle('primary',state.investmentMode==='attack');ma.classList.toggle('save',false)}if(md){md.classList.toggle('primary',state.investmentMode==='defense')}if(mb)mb.textContent=`現在：${investmentModeLabel()}`;if(mde)mde.textContent=state.investmentMode==='attack'?'攻め：★★★ S＝1,000円/点、★★ A＝400円/点。★★★★ SPは従来の現在資金1.8%複利を使用します。':'守り：★★★★ SP＝現在資金1.8%、★★★ S＝0.9%、★★ A＝0.45%を100円単位で算出します。';renderMissResearchSummary();}
+const ma=document.getElementById('modeAttackBtn'),md=document.getElementById('modeDefenseBtn'),mb=document.getElementById('investmentModeBadge'),mde=document.getElementById('investmentModeDetail');if(ma){ma.classList.toggle('primary',state.investmentMode==='attack');ma.classList.toggle('save',false)}if(md){md.classList.toggle('primary',state.investmentMode==='defense')}if(mb)mb.textContent=`現在：${investmentModeLabel()}`;if(mde)mde.textContent=state.investmentMode==='attack'?'攻め：★★★ S＝1,000円/点、★★ A＝400円/点。★★★★ SPは従来の現在資金1.8%複利を使用します。':'守り：★★★★ SP＝現在資金1.8%、★★★ S＝0.9%、★★ A＝0.45%を100円単位で算出します。';renderMissResearchSummary();updateDeviceSyncUi();}
 function safeRender(name,fn){
  try{fn();return true}
  catch(e){
@@ -2399,6 +2417,126 @@ function reconcileSmartFinderBoard(matches,st){
  if(removed){persistState();renderAll();appLog('SMART_FINDER_BOARD_RECONCILED',{removed,keep:[...keep]})}
  return removed;
 }
+
+function updateDeviceSyncUi(){
+ const b=document.getElementById('deviceSyncBadge');
+ const s=document.getElementById('deviceSyncSummary');
+ if(b){
+   if(cloudLastError){b.textContent='再接続中';b.className='badge gold'}
+   else if(cloudInitialized){b.textContent=`同期中 r${cloudRevision}`;b.className='badge green'}
+   else {b.textContent='未接続';b.className='badge'}
+ }
+ if(s){
+   if(cloudLastError)s.textContent=`端末内データで継続中。共通同期を再試行します：${cloudLastError}`;
+   else if(cloudInitialized)s.textContent=`PC / iPhone 共通同期 ON｜revision ${cloudRevision}${cloudLastAt?`｜最終 ${new Date(cloudLastAt).toLocaleString('ja-JP')}`:''}`;
+ }
+}
+function queueCloudPush(){
+ if(testMode||cloudSuppressPush)return;
+ clearTimeout(cloudPushTimer);
+ cloudPushTimer=setTimeout(()=>pushCloudState(false),500);
+}
+async function fetchCloudState(){
+ const r=await fetch('/api/client-state',{cache:'no-store'});
+ if(!r.ok)throw new Error('cloud GET HTTP '+r.status);
+ return await r.json();
+}
+async function pushCloudState(force=false){
+ if(testMode||cloudBusy||!cloudInitialized)return false;
+ cloudBusy=true;
+ try{
+   const r=await fetch('/api/client-state',{
+     method:'POST',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({base_revision:cloudRevision,source:deviceId,payload:state}),
+     cache:'no-store'
+   });
+   const d=await r.json().catch(()=>({}));
+   if(r.status===409||d.reason==='revision_conflict'){
+     await pullCloudState(true);
+     return false;
+   }
+   if(!r.ok||!d.ok)throw new Error(d.reason||('cloud POST HTTP '+r.status));
+   cloudRevision=Number(d.revision)||cloudRevision;
+   cloudLastAt=Date.now();cloudLastError='';
+   updateDeviceSyncUi();
+   return true;
+ }catch(e){
+   cloudLastError=String(e);updateDeviceSyncUi();return false;
+ }finally{cloudBusy=false}
+}
+async function pullCloudState(render=true){
+ if(testMode)return false;
+ try{
+   const d=await fetchCloudState();
+   if(!d?.ok)return false;
+   if(!d.exists){
+     cloudRevision=Number(d.revision)||0;
+     cloudInitialized=true;
+     cloudLastError='';cloudLastAt=Date.now();
+     updateDeviceSyncUi();
+     await pushCloudState(true);
+     return true;
+   }
+   const remoteRev=Number(d.revision)||0;
+   if(remoteRev>cloudRevision&&d.payload&&typeof d.payload==='object'){
+     cloudSuppressPush=true;
+     try{
+       state=normalizeLoaded(d.payload);
+       recalculateOperations();
+       localStorage.setItem(storageKey(),JSON.stringify(state));
+       cloudRevision=remoteRev;
+       cloudLastAt=Date.now();cloudLastError='';
+       if(render)renderAll();
+       appLog('DEVICE_SYNC_PULLED',{revision:cloudRevision,source:d.source||''});
+     }finally{cloudSuppressPush=false}
+   }else{
+     cloudRevision=Math.max(cloudRevision,remoteRev);
+     cloudLastAt=Date.now();cloudLastError='';
+   }
+   cloudInitialized=true;
+   updateDeviceSyncUi();
+   return true;
+ }catch(e){
+   cloudLastError=String(e);updateDeviceSyncUi();return false;
+ }
+}
+async function initializeDeviceSync(){
+ if(testMode)return;
+ try{
+   const d=await fetchCloudState();
+   if(!d?.ok)throw new Error('cloud invalid response');
+   if(d.exists&&d.payload&&typeof d.payload==='object'){
+     cloudSuppressPush=true;
+     try{
+       state=normalizeLoaded(d.payload);
+       recalculateOperations();
+       localStorage.setItem(storageKey(),JSON.stringify(state));
+       cloudRevision=Number(d.revision)||0;
+       cloudInitialized=true;
+       cloudLastAt=Date.now();cloudLastError='';
+       renderAll();
+       appLog('DEVICE_SYNC_INITIAL_PULL',{revision:cloudRevision,source:d.source||''});
+     }finally{cloudSuppressPush=false}
+   }else{
+     cloudRevision=Number(d.revision)||0;
+     cloudInitialized=true;
+     cloudLastAt=Date.now();cloudLastError='';
+     updateDeviceSyncUi();
+     await pushCloudState(true);
+     appLog('DEVICE_SYNC_INITIAL_SEED',{revision:cloudRevision});
+   }
+ }catch(e){
+   cloudLastError=String(e);cloudInitialized=false;updateDeviceSyncUi();
+ }
+}
+async function deviceSyncNow(){
+ if(testMode){toast('本番モードで同期してください');return}
+ const ok=await pullCloudState(true);
+ if(ok){await pushCloudState(true);toast('PC / iPhone 共通データを同期しました')}
+ else toast('同期できません。端末内データは保持されています');
+}
+
 async function syncFromSmartFinder(){
  if(testMode){setSfUi({agent_online:true,running:false},'安全テストモード中：SMART FINDER自動取込は停止しています。');return}
  try{
@@ -2594,7 +2732,7 @@ function renderMissResearchSummary(){
  e.textContent=`不的中 ${rows.length}件｜着順入力済み ${complete}件｜未入力 ${rows.length-complete}件`;
 }
 
-window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog,exportFullBackup,chooseBackupRestore,readBackupRestoreFile,confirmBackupRestore,saveAutoSchedule,requestInvestmentMode,confirmInvestmentMode,addAdditionalFunds,confirmAdditionalFunds,withdrawFunds,confirmWithdrawal,exportMissResearchCsv};
+window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog,exportFullBackup,chooseBackupRestore,readBackupRestoreFile,confirmBackupRestore,saveAutoSchedule,requestInvestmentMode,confirmInvestmentMode,addAdditionalFunds,confirmAdditionalFunds,withdrawFunds,confirmWithdrawal,exportMissResearchCsv,deviceSyncNow};
 window.addEventListener('message',e=>{if(e.data?.type==='SMART_FINDER_RESULTS'&&e.data.races)receive(e.data.races)});
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
  document.querySelectorAll('.tab,.page').forEach(x=>x.classList.remove('active'));
@@ -2615,6 +2753,7 @@ const modeDefenseBtn=document.getElementById('modeDefenseBtn');if(modeDefenseBtn
 const addFundsBtn=document.getElementById('addFundsBtn');if(addFundsBtn)addFundsBtn.onclick=addAdditionalFunds;
 const withdrawFundsBtn=document.getElementById('withdrawFundsBtn');if(withdrawFundsBtn)withdrawFundsBtn.onclick=withdrawFunds;
 const exportMissResearchBtn=document.getElementById('exportMissResearchBtn');if(exportMissResearchBtn)exportMissResearchBtn.onclick=exportMissResearchCsv;
+const deviceSyncNowBtn=document.getElementById('deviceSyncNowBtn');if(deviceSyncNowBtn)deviceSyncNowBtn.onclick=deviceSyncNow;
 document.getElementById('importBtn').onclick=()=>{if(testMode){toast('テストモード中は本番検索結果を取り込みません');return}try{const j=JSON.parse(document.getElementById('importJson').value);receive(j)}catch(e){toast('JSON形式を確認してください')}};
 document.getElementById('resetBtn').onclick=()=>showModal(`<h3>${testMode?'テストデータ':'全データ'}を初期化しますか？</h3><p class="note">${testMode?'SAFE TESTの購入・結果・資金だけを消し、3件のテストレースを投票待ちへ戻します。本番データには触れません。':'SELECT設定・レース履歴・資金履歴をすべて消し、30,000円開始へ戻します。'}</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn danger" id="doReset">初期化</button></div>`);document.addEventListener('click',e=>{if(e.target?.id==='doReset'){if(testMode){clearTestData();closeModal();return}state=initial();draftCandidates={...state.candidates};localStorage.removeItem(storageKey());save();closeModal();appLog('DATA_RESET');toast('初期化しました')}});
 document.getElementById('testModeBtn').onclick=()=>testMode?exitTestMode():enterTestMode();
@@ -2636,6 +2775,8 @@ appLog('APP_START',{version:'v3.2-safe-snapshot',testMode});
 window.addEventListener('error',e=>appLog('WINDOW_ERROR',{message:e.message||'',source:e.filename||'',line:e.lineno||0}));
 appLog('LIVE_TRIAL_READY',{date:todayStr(),currentFunds:state.currentFunds,races:(state.races||[]).length});
 renderAll();
+initializeDeviceSync();
+setInterval(()=>pullCloudState(true),5000);
 syncFromSmartFinder();
 setInterval(syncFromSmartFinder,1500);
 })();
