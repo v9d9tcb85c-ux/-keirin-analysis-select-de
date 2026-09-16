@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.21.1 VERIFIED ERA</title>
+<title>WINTICKET SMART FINDER SELECT / v3.22 OFFICIAL ERA</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -1356,7 +1356,7 @@ body::after{
   </main>
 
   <main id="stats" class="page">
-    <section class="heroPanel pageHero"><div class="pageHeroTitle"><div><div class="eyebrow">SMART FINDER PERFORMANCE</div><h2>運用統計</h2></div><div class="rule">ライン修正済み＋27条件のみ<br>旧3ヶ条の購入は成績から除外</div></div><div class="kpis" id="statsKpis"></div><div class="note" style="margin-top:10px">旧3ヶ条の購入履歴は実際の取引記録として保持し、現在資金にも反映します。ただし27条件の損益・回収率・的中率には混ぜません。</div></section>
+    <section class="heroPanel pageHero"><div class="pageHeroTitle"><div><div class="eyebrow">SMART FINDER PERFORMANCE</div><h2>正式運用統計</h2></div><div class="rule">2026年9月17日開始<br>ライン修正済み＋正式27条件のみ</div></div><div class="kpis" id="statsKpis"></div><div class="note" style="margin-top:10px">9月16日以前の購入履歴はLEGACYとして保存します。正式運用の資産・損益・回収率・的中率・資金推移には一切混ぜません。</div></section>
 
     <section class="section">
       <div class="sectionHead"><h3><span>PERFORMANCE</span> 今日 / 今月</h3><span class="badge" id="statsPeriodBadge">LIVE</span></div>
@@ -1423,6 +1423,15 @@ body::after{
       <div class="settingsCard" style="margin:10px 0 12px"><div class="note">守りモードの正式複利ルール</div><div style="font-weight:900;font-size:16px;line-height:1.8">★★★★：現在資金の1.8% / 1点<br>★★★：現在資金の0.9% / 1点<br>★★：現在資金の0.45% / 1点<br>☆0：投資なし</div><div class="note">100円単位切り捨て・最低100円。対象が複数点なら「ランク別の1点額 × 点数」。☆0は投資しません。</div></div><div class="formRow"><div class="field"><label>開始資金</label><select id="startFunds" disabled><option value="10000">10,000円</option><option value="20000">20,000円</option><option value="30000">30,000円</option><option value="50000">50,000円</option><option value="100000">100,000円</option></select></div><div class="field"><label>現在資金</label><input id="currentFunds" type="number" disabled></div></div>
       <p class="note">現在資金は投票・払戻・追加資金で自動更新し、直接変更しません。攻め/守りの切替は購入前の予定1点金額だけに反映し、購入済み履歴は固定して保存します。</p>
       <button class="btn save" id="saveMoney" style="display:none;width:100%">資金設定を保存</button>
+    </div></section>
+    <section class="section"><div class="sectionHead"><h3><span>OFFICIAL ERA</span> 正式運用リセット</h3><span class="badge green">2026/09/17</span></div><div class="settingsCard">
+      <p class="note">旧版の購入履歴は消さずにLEGACYへ分離します。9月17日の最初の購入登録時、購入直前の残高を正式開始資金として自動固定します。先に手動で開始する場合は、下の金額を確認して実行してください。</p>
+      <div class="formRow">
+        <div class="field"><label>正式運用の開始資金</label><input id="officialStartFundsInput" type="number" min="100" step="100" inputmode="numeric"></div>
+        <div class="field"><label>正式運用開始日</label><input value="2026-09-17" disabled></div>
+      </div>
+      <button class="btn primary" id="officialEraResetBtn" style="width:100%">9月17日から正式運用を開始</button>
+      <div class="note" id="officialEraSummary" style="margin-top:10px"></div>
     </div></section>
     <section class="section"><div class="sectionHead"><h3><span>AUTO SCHEDULE</span> 自動検索時刻</h3></div><div class="settingsCard">
       <p class="note">検索内容は変更しません。朝はF2の M / D / N、MNはF2の MNだけを検索し、ここでは開始時刻だけ変更します。保存した時刻はPC側へ保存され、PC Agent再起動後も残ります。</p>
@@ -1594,7 +1603,7 @@ function enrichCandidateStats(c,race){
 }
 function enrichRaceCandidates(r){if(!r)return r;r.candidates=(r.candidates||[]).map(c=>enrichCandidateStats(c,r));return r}
 
-const initial=()=>({version:9,investmentMode:'attack',startFunds:30000,currentFunds:30000,candidates:{"ALL-001":true,"ALL-002":true,"ALL-003":true,"ALL-004":true,"ALL-005":true,"ALL-006":true,"ALL-007":true,"ALL-008":true,"ALL-009":true,"ALL-010":true,"OTH-001":true,"OTH-002":true,"OTH-003":true,"OTH-004":true,"OTH-005":true,"OTH-006":true,"OTH-007":true,"OTH-008":true,"OTH-009":true,"OTH-010":true,"OTH-011":true,"OTH-012":true,"OTH-013":true,"OTH-014":true,"OTH-015":true,"OTH-016":true,"OTH-017":true},settingHistory:[],moneyHistory:[],fundingHistory:[],withdrawalHistory:[],races:[],capital:[{at:new Date().toISOString(),value:30000,type:'開始'}],sync:{imported:0,lastAt:null,lastPhase:'',lastError:''}});
+const initial=()=>({version:10,investmentMode:'attack',startFunds:30000,currentFunds:30000,officialEra:{startDate:'2026-09-17',startedAt:null,configuredAt:null,startFunds:null,legacySnapshot:null},candidates:{"ALL-001":true,"ALL-002":true,"ALL-003":true,"ALL-004":true,"ALL-005":true,"ALL-006":true,"ALL-007":true,"ALL-008":true,"ALL-009":true,"ALL-010":true,"OTH-001":true,"OTH-002":true,"OTH-003":true,"OTH-004":true,"OTH-005":true,"OTH-006":true,"OTH-007":true,"OTH-008":true,"OTH-009":true,"OTH-010":true,"OTH-011":true,"OTH-012":true,"OTH-013":true,"OTH-014":true,"OTH-015":true,"OTH-016":true,"OTH-017":true},settingHistory:[],moneyHistory:[],fundingHistory:[],withdrawalHistory:[],races:[],capital:[{at:new Date().toISOString(),value:30000,type:'開始'}],sync:{imported:0,lastAt:null,lastPhase:'',lastError:''}});
 let state=load(), editMode=false, draftCandidates={...state.candidates}, moneyEdit=false;
 function normalizeLoaded(raw){
  const base=initial(), merged={...base,...(raw&&typeof raw==='object'?raw:{})};
@@ -1602,10 +1611,11 @@ function normalizeLoaded(raw){
  const savedCandidates=(raw&&raw.candidates)||{};
  Object.keys(base.candidates).forEach(k=>{if(Object.prototype.hasOwnProperty.call(savedCandidates,k))merged.candidates[k]=!!savedCandidates[k]});
  merged.sync={...base.sync,...((raw&&raw.sync)||{})};
+ merged.officialEra={...base.officialEra,...((raw&&raw.officialEra)||{}),startDate:'2026-09-17'};
  merged.investmentMode=(raw&&['attack','defense'].includes(raw.investmentMode))?raw.investmentMode:'attack';
  merged.races=Array.isArray(merged.races)?merged.races:[]; merged.fundingHistory=Array.isArray(merged.fundingHistory)?merged.fundingHistory:[]; merged.withdrawalHistory=Array.isArray(merged.withdrawalHistory)?merged.withdrawalHistory:[];
  merged.capital=Array.isArray(merged.capital)&&merged.capital.length?merged.capital:base.capital;
- merged.version=9;
+ merged.version=10;
  merged.races.forEach(r=>{
   if(!r.grade)r.grade=r.classGrade||'';
   if(r.investmentConfirmed==null && (r.status||'投票待ち')==='投票待ち'){
@@ -1681,29 +1691,28 @@ function unitForRank(funds,rank){
  return Math.max(100,Math.floor((Math.max(0,Number(funds)||0)*rate)/100)*100);
 }
 function investmentModeLabel(mode=state.investmentMode){return mode==='attack'?'攻め':'守り'}
-function unitForRace(r,funds=state.currentFunds){return unitForRank(funds,rankForRace(r))}
+function unitForRace(r,funds=activeFunds()){return unitForRank(funds,rankForRace(r))}
 function activeCandidateIds(){return Object.keys(state.candidates).filter(k=>state.candidates[k])}
 function keyOf(r){return `${r.date}|${r.venue}|${Number(r.raceNo)}`}
 function todayStr(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`}
-// v3.21.2 27-RULE ERA: 実購入は残高へ残し、現行27条件の成績だけを分離集計する。
-const VERIFIED_STATS_START_AT='2026-09-13T16:10:00+09:00';
-const VERIFIED_STATS_START_MS=Date.parse(VERIFIED_STATS_START_AT);
+// v3.22 OFFICIAL ERA: 2026-09-17以降・ライン修正済み・正式27条件だけを正式運用として集計する。
+const OFFICIAL_START_DATE='2026-09-17';
+const OFFICIAL_START_AT='2026-09-17T00:00:00+09:00';
+const OFFICIAL_START_MS=Date.parse(OFFICIAL_START_AT);
 function isCurrent27RuleOperation(r){
  const ids=(r?.candidates||[]).map(c=>String(c?.id||c?.ruleId||c?.rule_id||'').trim()).filter(Boolean);
  return ids.length>0&&ids.every(id=>/^(ALL|OTH)-\d{3}$/.test(id));
 }
 function isVerifiedOperation(r){
- const at=String(r?.betAt||'').trim();
- if(!at)return false;
- const t=Date.parse(at);
- return Number.isFinite(t)&&t>=VERIFIED_STATS_START_MS&&isCurrent27RuleOperation(r);
+ const raceDate=String(r?.date||'').slice(0,10);
+ return raceDate>=OFFICIAL_START_DATE&&isCurrent27RuleOperation(r);
 }
 function verifiedPurchased(){return purchased().filter(isVerifiedOperation)}
 function verifiedSettled(){return verifiedPurchased().filter(r=>['的中','不的中'].includes(r.status))}
 function verifiedPerformance(){return statsForRaceList(verifiedPurchased())}
 function parseBetsText(v){return String(v||'').split(/[、,，\s]+/).map(x=>x.trim()).filter(Boolean)}
 function racePoints(r){if(Array.isArray(r.manualBets)&&r.manualBets.length)return r.manualBets.length;return (r.candidates||[]).reduce((s,c)=>s+(Number(c.points)||((c.bets||[]).length)||1),0)}
-function plannedInvestment(r){return r.investmentConfirmed!=null?r.investmentConfirmed:unitForRace(r,state.currentFunds)*racePoints(r)}
+function plannedInvestment(r){return r.investmentConfirmed!=null?r.investmentConfirmed:unitForRace(r,activeFunds())*racePoints(r)}
 function settled(){return state.races.filter(r=>['的中','不的中'].includes(r.status))}
 function investedTotal(){return settled().reduce((s,r)=>s+(r.investmentConfirmed||0),0)}
 function payoutTotal(){return settled().reduce((s,r)=>s+(r.payout||0),0)}
@@ -1766,6 +1775,39 @@ function recalculateOperations(){
  state.capital=cap;
  return running;
 }
+function officialEraStarted(){return !!(state.officialEra&&state.officialEra.startedAt&&Number.isFinite(Number(state.officialEra.startFunds)))}
+function officialFinancialState(){
+ const fallback=Math.max(0,Number(state.currentFunds)||0);
+ if(!officialEraStarted())return {started:false,start: fallback,current:fallback,added:0,withdrawn:0,profit:0,capital:[]};
+ const start=Math.max(0,Number(state.officialEra.startFunds)||0),events=[];
+ for(const r of verifiedPurchased()){
+   events.push({at:r.betAt||`${r.date}T00:00:00+09:00`,order:1,type:'purchase',amount:Math.max(0,Number(r.investmentConfirmed)||0),race:r});
+   if(['的中','不的中'].includes(r.status))events.push({at:r.settledAt||r.betAt||`${r.date}T23:59:59+09:00`,order:2,type:'payout',amount:Math.max(0,Number(r.payout)||0),race:r});
+ }
+ for(const x of state.fundingHistory||[]){if(String(x.at||'')>=OFFICIAL_START_AT&&Number(x.amount)>0)events.push({at:x.at,order:0,type:'fund',amount:Number(x.amount),source:x})}
+ for(const x of state.withdrawalHistory||[]){if(String(x.at||'')>=OFFICIAL_START_AT&&Number(x.amount)>0)events.push({at:x.at,order:0,type:'withdraw',amount:Number(x.amount),source:x})}
+ events.sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))||a.order-b.order);
+ let running=start,added=0,withdrawn=0;
+ const capital=[{at:OFFICIAL_START_AT,value:running,type:'正式運用開始'}];
+ for(const e of events){
+   if(e.type==='fund'){running+=e.amount;added+=e.amount;capital.push({at:e.at,value:running,type:`追加資金 +${yen(e.amount)}`})}
+   else if(e.type==='withdraw'){running-=e.amount;withdrawn+=e.amount;capital.push({at:e.at,value:running,type:`出金 -${yen(e.amount)}`})}
+   else if(e.type==='purchase'){e.race.officialFundsBeforePurchase=running;running-=e.amount;e.race.officialFundsAfterPurchase=running;e.race.officialCumulativeProfitAfter=running-start-added+withdrawn;capital.push({at:e.at,value:running,type:`購入 ${e.race.venue}${e.race.raceNo}R`})}
+   else {running+=e.amount;e.race.officialFundsAfterSettlement=running;e.race.officialCumulativeProfitAfter=running-start-added+withdrawn;capital.push({at:e.at,value:running,type:`払戻 ${e.race.venue}${e.race.raceNo}R`})}
+ }
+ return {started:true,start,current:running,added,withdrawn,profit:running-start-added+withdrawn,capital};
+}
+function activeFunds(){return officialEraStarted()?officialFinancialState().current:Math.max(0,Number(state.currentFunds)||0)}
+function initializeOfficialEra(amount,automatic=false){
+ const n=Math.max(100,Math.floor((Number(amount)||0)/100)*100),previous=state.officialEra||{};
+ state.officialEra={
+   startDate:OFFICIAL_START_DATE,startedAt:OFFICIAL_START_AT,configuredAt:new Date().toISOString(),startFunds:n,
+   legacySnapshot:{at:new Date().toISOString(),startFunds:Number(state.startFunds)||0,currentFunds:Number(state.currentFunds)||0,purchased:purchased().length,settled:settled().length,previousOfficial:previous.startedAt?{...previous}:null}
+ };
+ for(const r of purchased())r.verificationEra=isVerifiedOperation(r)?'OFFICIAL_20260917_PLUS':'LEGACY_PRE_20260917';
+ appLog('OFFICIAL_ERA_INITIALIZED',{automatic,startAt:OFFICIAL_START_AT,startFunds:n,legacyPurchases:purchased().filter(r=>!isVerifiedOperation(r)).length});
+ return n;
+}
 function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1800)}
 function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 function statusBadge(s){const c=s==='的中'?'green':s==='不的中'?'red':s==='結果待ち'?'gold':'gray';return `<span class="badge ${c}">${esc(s||'投票待ち')}</span>`}
@@ -1781,7 +1823,7 @@ function boardOrder(a,b){
 }
 function nextTargetHtml(r){
  if(!r)return '<div class="empty nextEmpty">本日の未確定レースはありません。</div>';
- const inv=plannedInvestment(r),pts=racePoints(r),unit=r.investmentConfirmed!=null?r.unitConfirmed:unitForRace(r,state.currentFunds),tags=(r.candidates||[]).map(c=>candTag(c.id)).join('');
+ const inv=plannedInvestment(r),pts=racePoints(r),unit=r.investmentConfirmed!=null?r.unitConfirmed:unitForRace(r,activeFunds()),tags=(r.candidates||[]).map(c=>candTag(c.id)).join('');
  const action=r.status==='投票待ち'?`<button class="btn primary" onclick="SMART_SELECT.markBet('${esc(r.key)}')">購入登録</button>`:r.status==='結果待ち'?`<button class="btn save" onclick="SMART_SELECT.openResult('${esc(r.key)}')">結果を入力</button>`:'';
  return `<div class="nextTargetCard"><div class="nextVenue"><span>${esc(r.venue)}</span><b>${esc(r.raceNo)}R</b></div><div class="nextBody"><div class="nextMetaLine"><span>▣ ${esc(r.date)}</span><span>${esc(r.grade||'—')}</span><span>${esc(r.timeBand||'—')}</span><span>${esc(r.line||'—')}</span></div><div class="nextInfoLine"><div class="nextTags">${tags}${statusBadge(r.status)}</div><div class="nextMetric"><small>1点金額</small><b>${yen(unit)}</b></div><div class="nextMetric"><small>点数</small><b>${pts}点</b></div><div class="nextMetric"><small>払戻</small><b>${r.payout!=null?yen(r.payout):'—'}</b></div></div></div><div class="nextActions">${action}<button class="btn" onclick="SMART_SELECT.openDetail('${esc(r.key)}')">詳細</button><span class="nextInvestment">${yen(inv)}<small>予定/確定投資</small></span></div></div>`;
 }
@@ -1791,7 +1833,9 @@ function renderCapitalTrend(){
  const sum=document.getElementById('capitalTrendSummary');
  const foot=document.getElementById('capitalTrendFoot');
  if(!host||!sum||!foot)return;
- const raw=Array.isArray(state.capital)?state.capital:[];
+ const financial=officialFinancialState();
+ if(!financial.started){host.innerHTML='<div class="capitalTrendEmpty">2026年9月17日の最初の購入登録時に、その直前残高を開始資金として正式運用を自動開始します。</div>';sum.innerHTML='<span class="capitalTrendPill">開始待ち <b>2026/09/17</b></span>';foot.textContent='以前の履歴はLEGACYとして保存され、正式資産には合算しません。';return}
+ const raw=financial.capital;
  const pts=raw.map((x,i)=>({i,value:Number(x.value)||0,at:x.at||'',type:x.type||''}));
  if(!pts.length){
    host.innerHTML='<div class="capitalTrendEmpty">資金履歴はまだありません。</div>';
@@ -1800,15 +1844,15 @@ function renderCapitalTrend(){
    return;
  }
  const values=pts.map(x=>x.value);
- const start=Number(state.startFunds)||values[0]||0;
- const current=Number(state.currentFunds)||values[values.length-1]||0;
+ const start=financial.start||values[0]||0;
+ const current=financial.current||values[values.length-1]||0;
  const hi=Math.max(...values),lo=Math.min(...values);
- const pnl=profitTotal();
- const added=totalAddedFunds();
+ const pnl=financial.profit;
+ const added=financial.added;
  sum.innerHTML=[
    `<span class="capitalTrendPill">開始 <b>${yen(start)}</b></span>`,
    `<span class="capitalTrendPill">追加資金 <b>${yen(added)}</b></span>`,
-   `<span class="capitalTrendPill">出金 <b>${yen(totalWithdrawnFunds())}</b></span>`,
+   `<span class="capitalTrendPill">出金 <b>${yen(financial.withdrawn)}</b></span>`,
    `<span class="capitalTrendPill">現在 <b>${yen(current)}</b></span>`,
    `<span class="capitalTrendPill">最高 <b>${yen(hi)}</b></span>`,
    `<span class="capitalTrendPill">最低 <b>${yen(lo)}</b></span>`
@@ -1849,17 +1893,18 @@ function renderHome(){
  const todayAll=state.races.filter(r=>r.date===todayStr());
  const activeToday=todayAll.filter(r=>!['的中','不的中'].includes(r.status));
  const opList=[...verifiedPurchased()].sort(operationSort),vp=statsForRaceList(opList);
- document.getElementById('homeKpis').innerHTML=[['現在資金',yen(state.currentFunds),`実残高｜開始 ${yen(state.startFunds)}`,'blue'],['27条件損益',`${vp.pl>=0?'+':''}${yen(vp.pl)}`,`旧3ヶ条除外｜購入 ${vp.purchased}件`,'green'],['27条件投資',yen(vp.purchasedInv),`確定払戻 ${yen(vp.pay)}`,'purple'],['27条件ROI / 的中率',`${vp.inv?pct(vp.roi):'—'} / ${vp.settled?pct(vp.hit):'—'}`,`確定 ${vp.settled}件`,'gold']].map((x,i)=>`<div class="kpi tone-${x[3]}"><div class="kpiIcon">${i===0?'▱':i===1?'▥':i===2?'◉':'◎'}</div><div class="lab">${x[0]}</div><div class="val ${i===1?(vp.pl>=0?'profit':'loss'):''}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
+ const financial=officialFinancialState();
+ document.getElementById('homeKpis').innerHTML=[['正式現在資金',yen(activeFunds()),financial.started?`9/17開始 ${yen(financial.start)}`:'9/17最初の購入時に開始','blue'],['正式運用損益',`${vp.pl>=0?'+':''}${yen(vp.pl)}`,`LEGACY除外｜購入 ${vp.purchased}件`,'green'],['正式運用投資',yen(vp.purchasedInv),`確定払戻 ${yen(vp.pay)}`,'purple'],['正式ROI / 的中率',`${vp.inv?pct(vp.roi):'—'} / ${vp.settled?pct(vp.hit):'—'}`,`確定 ${vp.settled}件`,'gold']].map((x,i)=>`<div class="kpi tone-${x[3]}"><div class="kpiIcon">${i===0?'▱':i===1?'▥':i===2?'◉':'◎'}</div><div class="lab">${x[0]}</div><div class="val ${i===1?(vp.pl>=0?'profit':'loss'):''}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
  // 本日のカードは「時刻→場→R」で固定。購入・結果入力後も位置は変えない。
  const sortedAll=[...todayAll].sort(boardOrder);
  const boardTitle=document.getElementById('todayBoardTitle');
  if(boardTitle)boardTitle.textContent='本日の対象';
  document.getElementById('todayCountBadge').textContent=`${sortedAll.length}件`;
  document.getElementById('todayRaces').innerHTML=sortedAll.length?sortedAll.map((r,i)=>raceHtml(r,false,i)).join(''):'<div class="empty">対象なし</div>';
- const vals=state.capital.map(x=>x.value), max=Math.max(...vals,1), min=Math.min(...vals,0);document.getElementById('capitalChart').innerHTML=vals.slice(-24).map(v=>`<div class="bar" style="height:${Math.max(4,((v-min)/(max-min||1))*100)}%" title="${yen(v)}"></div>`).join('');document.getElementById('capitalNote').textContent=`最低 ${yen(Math.min(...vals))} / 最高 ${yen(Math.max(...vals))} / 現在 ${yen(state.currentFunds)}`;renderCapitalTrend();
+ const vals=(financial.capital||[]).map(x=>x.value);if(vals.length){const max=Math.max(...vals,1),min=Math.min(...vals,0);document.getElementById('capitalChart').innerHTML=vals.slice(-24).map(v=>`<div class="bar" style="height:${Math.max(4,((v-min)/(max-min||1))*100)}%" title="${yen(v)}"></div>`).join('');document.getElementById('capitalNote').textContent=`正式運用｜最低 ${yen(Math.min(...vals))} / 最高 ${yen(Math.max(...vals))} / 現在 ${yen(activeFunds())}`}else{document.getElementById('capitalChart').innerHTML='';document.getElementById('capitalNote').textContent='正式運用は2026年9月17日から開始'}renderCapitalTrend();
 }
 function raceHtml(r,isNext,accentIndex=0){
- const pts=racePoints(r),unit=r.investmentConfirmed!=null?r.unitConfirmed:unitForRace(r,state.currentFunds),eraTag=r.investmentConfirmed!=null?`<span class="badge ${isVerifiedOperation(r)?'green':'gold'}">${isVerifiedOperation(r)?'27条件':'旧3ヶ条・集計除外'}</span>`:'',tags=(r.candidates||[]).map(c=>candTag(c.id)).join('')+eraTag,accent=['blue','green','gold'][Math.abs(Number(accentIndex)||0)%3];
+ const pts=racePoints(r),unit=r.investmentConfirmed!=null?r.unitConfirmed:unitForRace(r,activeFunds()),eraTag=r.investmentConfirmed!=null?`<span class="badge ${isVerifiedOperation(r)?'green':'gold'}">${isVerifiedOperation(r)?'正式運用':'LEGACY・集計除外'}</span>`:'',tags=(r.candidates||[]).map(c=>candTag(c.id)).join('')+eraTag,accent=['blue','green','gold'][Math.abs(Number(accentIndex)||0)%3];
  const action=r.status==='投票待ち'?`<button class="btn primary" onclick="SMART_SELECT.markBet('${esc(r.key)}')">購入登録</button>`:r.status==='結果待ち'?`<button class="btn save" onclick="SMART_SELECT.openResult('${esc(r.key)}')">結果を入力</button>`:'';
  if(isNext)return nextTargetHtml(r);
  const cs=r.candidates||[];
@@ -1876,15 +1921,16 @@ function renderCandidates(){document.getElementById('candidateList').classList.t
 function renderOperation(){
  const list=[...purchased()].sort(operationSort);
  const vp=statsForRaceList(list.filter(isVerifiedOperation));
- document.getElementById('operationKpis').innerHTML=[['現在資金',yen(state.currentFunds),`実残高｜開始 ${yen(state.startFunds)}`],['27条件損益',`${vp.pl>=0?'+':''}${yen(vp.pl)}`,`購入 ${vp.purchased}件`],['27条件投資',yen(vp.purchasedInv),`確定払戻 ${yen(vp.pay)}`],['27条件ROI / 的中率',`${vp.inv?pct(vp.roi):'—'} / ${vp.settled?pct(vp.hit):'—'}`,`確定 ${vp.settled}件`]].map((x,i)=>`<div class="kpi"><div class="lab">${x[0]}</div><div class="val ${i===1?(vp.pl>=0?'profit':'loss'):''}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
- document.getElementById('operationCount').textContent=`全${list.length}件 / 27条件${vp.purchased}件`;
+ const financial=officialFinancialState();
+ document.getElementById('operationKpis').innerHTML=[['正式現在資金',yen(activeFunds()),financial.started?`9/17開始 ${yen(financial.start)}`:'開始待ち'],['正式運用損益',`${vp.pl>=0?'+':''}${yen(vp.pl)}`,`購入 ${vp.purchased}件`],['正式運用投資',yen(vp.purchasedInv),`確定払戻 ${yen(vp.pay)}`],['正式ROI / 的中率',`${vp.inv?pct(vp.roi):'—'} / ${vp.settled?pct(vp.hit):'—'}`,`確定 ${vp.settled}件`]].map((x,i)=>`<div class="kpi"><div class="lab">${x[0]}</div><div class="val ${i===1?(vp.pl>=0?'profit':'loss'):''}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
+ document.getElementById('operationCount').textContent=`全${list.length}件 / 正式運用${vp.purchased}件 / LEGACY ${list.length-vp.purchased}件`;
  const rows=list.map(r=>{
    const inv=Number(r.investmentConfirmed)||0,pay=Number(r.payout)||0,settledNow=['的中','不的中'].includes(r.status);
    const pl=settledNow?pay-inv:null;
-   const rowFunds=settledNow?(Number(r.fundsAfterSettlement)||0):(Number(r.fundsAfterPurchase)||0);
-   const cum=Number.isFinite(Number(r.cumulativeProfitAfter))?Number(r.cumulativeProfitAfter):(rowFunds-(Number(state.startFunds)||0)-totalAddedFunds());
+   const official=isVerifiedOperation(r),rowFunds=official?(settledNow?(Number(r.officialFundsAfterSettlement)||0):(Number(r.officialFundsAfterPurchase)||0)):null;
+   const cum=official&&Number.isFinite(Number(r.officialCumulativeProfitAfter))?Number(r.officialCumulativeProfitAfter):null;
    const bets=raceBets(r);
-   return `<tr><td>${esc(r.date)}</td><td><b>${esc(r.venue)}</b></td><td>${esc(r.raceNo)}R</td><td>${esc(r.grade||'—')}</td><td>${esc(r.timeBand||'—')}</td><td>${esc(r.line||'—')}</td><td>${esc(r.threeOrder||'—')}</td><td><div style="margin-bottom:5px"><span class="badge ${isVerifiedOperation(r)?'green':'gold'}">${isVerifiedOperation(r)?'27条件':'旧3ヶ条・集計除外'}</span></div><div class="operationBets">${bets.length?bets.map(b=>`<span class="badge gold">${esc(b)}</span>`).join(''):'—'}</div>${(r.finish1||r.finish2||r.finish3)?`<div class="note" style="margin-top:4px">実着順：${esc(r.finish1||'—')}-${esc(r.finish2||'—')}-${esc(r.finish3||'—')}</div>`:''}${r.manualNote?`<div class="note" style="margin-top:4px">${esc(r.manualNote)}</div>`:''}</td><td class="money">${yen(inv)}</td><td class="money ${settledNow?'':'pending'}">${settledNow?yen(pay):'結果待ち'}</td><td class="money ${pl==null?'pending':pl>=0?'plus':'minus'}">${pl==null?'—':`${pl>=0?'+':''}${yen(pl)}`}</td><td class="money ${cum>=0?'plus':'minus'}">${cum>=0?'+':''}${yen(cum)}</td><td class="money">${yen(rowFunds)}</td><td><div class="operationActions"><button class="btn" onclick="SMART_SELECT.openOperationEdit('${esc(r.key)}')">修正</button><button class="btn danger" onclick="SMART_SELECT.openOperationDelete('${esc(r.key)}')">取消</button></div></td></tr>`;
+   return `<tr><td>${esc(r.date)}</td><td><b>${esc(r.venue)}</b></td><td>${esc(r.raceNo)}R</td><td>${esc(r.grade||'—')}</td><td>${esc(r.timeBand||'—')}</td><td>${esc(r.line||'—')}</td><td>${esc(r.threeOrder||'—')}</td><td><div style="margin-bottom:5px"><span class="badge ${official?'green':'gold'}">${official?'正式運用':'LEGACY・集計除外'}</span></div><div class="operationBets">${bets.length?bets.map(b=>`<span class="badge gold">${esc(b)}</span>`).join(''):'—'}</div>${(r.finish1||r.finish2||r.finish3)?`<div class="note" style="margin-top:4px">実着順：${esc(r.finish1||'—')}-${esc(r.finish2||'—')}-${esc(r.finish3||'—')}</div>`:''}${r.manualNote?`<div class="note" style="margin-top:4px">${esc(r.manualNote)}</div>`:''}</td><td class="money">${yen(inv)}</td><td class="money ${settledNow?'':'pending'}">${settledNow?yen(pay):'結果待ち'}</td><td class="money ${pl==null?'pending':pl>=0?'plus':'minus'}">${pl==null?'—':`${pl>=0?'+':''}${yen(pl)}`}</td><td class="money ${cum==null?'pending':cum>=0?'plus':'minus'}">${cum==null?'—':`${cum>=0?'+':''}${yen(cum)}`}</td><td class="money">${rowFunds==null?'—':yen(rowFunds)}</td><td><div class="operationActions"><button class="btn" onclick="SMART_SELECT.openOperationEdit('${esc(r.key)}')">修正</button><button class="btn danger" onclick="SMART_SELECT.openOperationDelete('${esc(r.key)}')">取消</button></div></td></tr>`;
  }).join('');
  const emptyRows='<tr><td colspan="14"><div class="empty">購入登録したレースはまだありません。</div></td></tr>';
  document.getElementById('operationRows').innerHTML=rows||emptyRows;
@@ -2023,7 +2069,7 @@ function renderModePerformance(){
 function renderStats(){
  const vp=verifiedPerformance(),s=verifiedSettled();
  const statsKpis=document.getElementById('statsKpis');
- if(statsKpis)statsKpis.innerHTML=[['27条件確定',vp.settled+'R','旧3ヶ条を自動除外'],['的中',vp.hits+'R',vp.settled?pct(vp.hit):'—'],['27条件損益',`${vp.pl>=0?'+':''}${yen(vp.pl)}`,'実残高は全購入を保持'],['回収率',vp.inv?pct(vp.roi):'—',`払戻 ${yen(vp.pay)}`]].map((x,i)=>`<div class="kpi"><div class="lab">${x[0]}</div><div class="val ${i===2?(vp.pl>=0?'profit':'loss'):''}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
+ if(statsKpis)statsKpis.innerHTML=[['正式運用確定',vp.settled+'R','9/17以前はLEGACY'],['的中',vp.hits+'R',vp.settled?pct(vp.hit):'—'],['正式運用損益',`${vp.pl>=0?'+':''}${yen(vp.pl)}`,'9/17以降のみ集計'],['回収率',vp.inv?pct(vp.roi):'—',`払戻 ${yen(vp.pay)}`]].map((x,i)=>`<div class="kpi"><div class="lab">${x[0]}</div><div class="val ${i===2?(vp.pl>=0?'profit':'loss'):''}">${x[1]}</div><div class="sub">${x[2]}</div></div>`).join('');
 
  const today=localDateKey(),month=today.slice(0,7);
  const ds=statsForRaceList((state.races||[]).filter(r=>isVerifiedOperation(r)&&String(r.date||'').slice(0,10)===today));
@@ -2062,11 +2108,11 @@ function renderStats(){
    return `<div class="historyCard"><strong>${candidateDefs[id].name}</strong>　${races.length}R / 的中 ${h}R<br>参考投資 ${yen(iv)}　参考払戻 ${yen(pv)}　参考回収率 ${pct(iv?pv/iv*100:0)}</div>`;
  }).join('');
 }
-function renderSettings(){document.getElementById('startFunds').value=String(state.startFunds);document.getElementById('currentFunds').value=state.currentFunds;document.getElementById('startFunds').disabled=!moneyEdit;document.getElementById('moneyLockState').textContent=moneyEdit?'🔓 資金設定変更中':'🔒 資金設定ロック中';document.getElementById('saveMoney').style.display=moneyEdit?'block':'none';const b=document.getElementById('testModeBtn'),s=document.getElementById('testModeState'),banner=document.getElementById('testBanner');if(b)b.textContent=testMode?'本番モードへ戻る':'安全テストモードを開始';if(s){const pc=purchased().length,sc=settled().length;s.innerHTML=testMode?`<b>テスト中</b>｜3件のテストレースで再計算確認。購入 ${pc}件 / 確定 ${sc}件。本番の購入・払戻・資金には反映されません。`:'本番モードです。テストを始めても現在の本番データは変更しません。'}if(banner)banner.classList.toggle('show',testMode);const fs=document.getElementById('additionalFundsSummary'),fh=document.getElementById('additionalFundsHistory');if(fs)fs.innerHTML=`追加資金累計：<b>${yen(totalAddedFunds())}</b>　｜　開始資金：${yen(state.startFunds)}　｜　現在資金：${yen(state.currentFunds)}`;if(fh){const arr=[...(state.fundingHistory||[])].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))).slice(0,8);fh.innerHTML=arr.length?arr.map(x=>`<div class="historyCard" style="padding:9px 11px"><div style="display:flex;justify-content:space-between;gap:8px"><b>+${yen(x.amount)}</b><span class="note">${esc(x.at?new Date(x.at).toLocaleString('ja-JP'):'')}</span></div>${x.note?`<div class="note" style="margin-top:4px">${esc(x.note)}</div>`:''}</div>`).join(''):'<div class="note">追加資金の履歴はまだありません。</div>';}const ws=document.getElementById('withdrawalSummary'),wh=document.getElementById('withdrawalHistory');
-if(ws)ws.innerHTML=`出金累計：<b>${yen(totalWithdrawnFunds())}</b>　｜　追加資金：${yen(totalAddedFunds())}　｜　現在資金：${yen(state.currentFunds)}`;
+function renderSettings(){const financial=officialFinancialState();document.getElementById('startFunds').value=String(financial.started?financial.start:state.startFunds);document.getElementById('currentFunds').value=activeFunds();document.getElementById('startFunds').disabled=!moneyEdit||financial.started;document.getElementById('moneyLockState').textContent=financial.started?'🔒 正式運用開始済み':moneyEdit?'🔓 資金設定変更中':'🔒 資金設定ロック中';document.getElementById('saveMoney').style.display=moneyEdit&&!financial.started?'block':'none';const oi=document.getElementById('officialStartFundsInput'),ob=document.getElementById('officialEraResetBtn'),os=document.getElementById('officialEraSummary');if(oi&&document.activeElement!==oi)oi.value=financial.started?financial.start:activeFunds();if(ob)ob.textContent=financial.started?'正式開始資金を訂正する':'9月17日から正式運用を開始';if(os)os.innerHTML=financial.started?`正式開始：<b>2026/09/17</b>　｜　開始 ${yen(financial.start)}　｜　現在 ${yen(financial.current)}<br>LEGACY購入 ${(state.officialEra?.legacySnapshot?.purchased)||purchased().filter(r=>!isVerifiedOperation(r)).length}件は保存済み・正式集計外です。`:`開始待ちです。9月17日の最初の購入直前残高 <b>${yen(activeFunds())}</b> を自動固定します。`;const b=document.getElementById('testModeBtn'),s=document.getElementById('testModeState'),banner=document.getElementById('testBanner');if(b)b.textContent=testMode?'本番モードへ戻る':'安全テストモードを開始';if(s){const pc=purchased().length,sc=settled().length;s.innerHTML=testMode?`<b>テスト中</b>｜3件のテストレースで再計算確認。購入 ${pc}件 / 確定 ${sc}件。本番の購入・払戻・資金には反映されません。`:'本番モードです。テストを始めても現在の本番データは変更しません。'}if(banner)banner.classList.toggle('show',testMode);const fs=document.getElementById('additionalFundsSummary'),fh=document.getElementById('additionalFundsHistory');if(fs)fs.innerHTML=`正式追加資金：<b>${yen(financial.added)}</b>　｜　正式開始資金：${financial.started?yen(financial.start):'開始待ち'}　｜　正式現在資金：${yen(activeFunds())}`;if(fh){const arr=[...(state.fundingHistory||[])].filter(x=>!financial.started||String(x.at||'')>=OFFICIAL_START_AT).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))).slice(0,8);fh.innerHTML=arr.length?arr.map(x=>`<div class="historyCard" style="padding:9px 11px"><div style="display:flex;justify-content:space-between;gap:8px"><b>+${yen(x.amount)}</b><span class="note">${esc(x.at?new Date(x.at).toLocaleString('ja-JP'):'')}</span></div>${x.note?`<div class="note" style="margin-top:4px">${esc(x.note)}</div>`:''}</div>`).join(''):'<div class="note">正式運用の追加資金履歴はまだありません。</div>';}const ws=document.getElementById('withdrawalSummary'),wh=document.getElementById('withdrawalHistory');
+if(ws)ws.innerHTML=`正式出金：<b>${yen(financial.withdrawn)}</b>　｜　正式追加資金：${yen(financial.added)}　｜　正式現在資金：${yen(activeFunds())}`;
 if(wh){
- const warr=[...(state.withdrawalHistory||[])].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))).slice(0,8);
- wh.innerHTML=warr.length?warr.map(x=>`<div class="historyCard" style="padding:9px 11px"><div style="display:flex;justify-content:space-between;gap:8px"><b>-${yen(x.amount)}</b><span class="note">${esc(x.at?new Date(x.at).toLocaleString('ja-JP'):'')}</span></div>${x.note?`<div class="note" style="margin-top:4px">${esc(x.note)}</div>`:''}</div>`).join(''):'<div class="note">出金履歴はまだありません。</div>';
+ const warr=[...(state.withdrawalHistory||[])].filter(x=>!financial.started||String(x.at||'')>=OFFICIAL_START_AT).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))).slice(0,8);
+ wh.innerHTML=warr.length?warr.map(x=>`<div class="historyCard" style="padding:9px 11px"><div style="display:flex;justify-content:space-between;gap:8px"><b>-${yen(x.amount)}</b><span class="note">${esc(x.at?new Date(x.at).toLocaleString('ja-JP'):'')}</span></div>${x.note?`<div class="note" style="margin-top:4px">${esc(x.note)}</div>`:''}</div>`).join(''):'<div class="note">正式運用の出金履歴はまだありません。</div>';
 }
 const ma=document.getElementById('modeAttackBtn'),md=document.getElementById('modeDefenseBtn'),mb=document.getElementById('investmentModeBadge'),mde=document.getElementById('investmentModeDetail');if(ma){ma.classList.toggle('primary',state.investmentMode==='attack');ma.classList.toggle('save',false)}if(md){md.classList.toggle('primary',state.investmentMode==='defense')}if(mb)mb.textContent=`現在：${investmentModeLabel()}`;if(mde)mde.textContent=state.investmentMode==='attack'?'攻め：★★★ S＝1,000円/点、★★ A＝400円/点。★★★★ SPは従来の現在資金1.8%複利を使用します。':'守り：★★★★ SP＝現在資金1.8%、★★★ S＝0.9%、★★ A＝0.45%を100円単位で算出します。';renderMissResearchSummary();updateDeviceSyncUi();}
 function safeRender(name,fn){
@@ -2086,11 +2132,11 @@ function renderAll(){
  safeRender('settings',renderSettings);
 }
 function receive(races,options={}){if(!Array.isArray(races))races=[races];let added=0,merged=0,skipped=0;for(const raw of races){if(!raw||!raw.date||!raw.venue||raw.raceNo==null)continue;const key=keyOf(raw);let r=state.races.find(x=>x.key===key);const incoming=(raw.candidates||[]).filter(c=>state.candidates[c.id]!==false).map(c=>enrichCandidateStats({...c,id:c.id||c.ruleId||c.rule_id,points:Number(c.points)||((c.bets||[]).length)||1,bets:c.bets||candidateDefs[c.id]?.bets||[]},raw));if(!incoming.length){skipped++;continue}if(!r){r={key,date:raw.date,venue:raw.venue,raceNo:Number(raw.raceNo),grade:raw.grade||raw.classGrade||'',startTime:raw.startTime||'',timeBand:raw.timeBand||'',candidates:[],status:'投票待ち',createdAt:new Date().toISOString(),source:raw.source||'',line:raw.line||'',threeOrder:raw.threeOrder||'',bankGroup:raw.bankGroup||bankGroupOf(raw.venue),predictionUrl:raw.predictionUrl||'',shadowOos:raw.shadowOos||[]};state.races.push(r);added++}else merged++;for(const c of incoming){const ex=r.candidates.find(x=>x.id===c.id);if(!ex)r.candidates.push(c);else{Object.assign(ex,c);ex.bets=[...new Set([...(ex.bets||[]),...(c.bets||[])])];ex.points=Math.max(ex.points||0,c.points||0)}}r.shadowOos=raw.shadowOos||r.shadowOos||[];r.startTime=raw.startTime||r.startTime;r.timeBand=raw.timeBand||r.timeBand;r.grade=raw.grade||raw.classGrade||r.grade||'';r.line=raw.line||r.line||'';r.threeOrder=raw.threeOrder||r.threeOrder||'';r.bankGroup=raw.bankGroup||r.bankGroup||bankGroupOf(r.venue);r.predictionUrl=raw.predictionUrl||r.predictionUrl||'';r.source=raw.source||r.source||''}if(added||merged){localStorage.setItem(storageKey(),JSON.stringify(state));renderAll()}if(!options.silent)toast(`取込完了：新規 ${added} / 統合 ${merged}${skipped?` / 除外 ${skipped}`:''}`);return {added,merged,skipped}}
-function markBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;const rank=rankForRace(r),unit=unitForRank(state.currentFunds,rank),inv=unit*racePoints(r);if(state.currentFunds<inv){toast('現在資金が予定投資額を下回っています');return}showModal(`<h3>購入登録しますか？</h3><p class="note">${esc(r.venue)} ${r.raceNo}R<br>運用モード：<b>${investmentModeLabel()}</b><br>${rank}ランク：1点 ${yen(unit)} × ${racePoints(r)}点 = <b>${yen(inv)}</b><br>実際に購入したレースだけ登録してください。確定すると運用台帳へ追加し、現在資金から購入額を差し引きます。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn primary" onclick="SMART_SELECT.confirmBet('${esc(key)}')">確定</button></div>`)}
-function confirmBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;const rank=rankForRace(r),unit=unitForRank(state.currentFunds,rank),inv=unit*racePoints(r);r.rankConfirmed=rank;r.investmentModeConfirmed=state.investmentMode;r.unitConfirmed=unit;r.investmentConfirmed=inv;r.status='結果待ち';r.betAt=new Date().toISOString();recalculateOperations();appLog('PURCHASE_CONFIRMED',{key,mode:r.investmentModeConfirmed,rank:r.rankConfirmed,rate:COMPOUND_RATE[r.rankConfirmed],investment:inv,unitConfirmed:unit,funds:state.currentFunds});save();closeModal();toast(testMode?'テスト購入を運用台帳へ登録しました':'購入を運用台帳へ登録しました')}
+function markBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;const funds=activeFunds(),rank=rankForRace(r),unit=unitForRank(funds,rank),inv=unit*racePoints(r);if(funds<inv){toast('正式現在資金が予定投資額を下回っています');return}showModal(`<h3>購入登録しますか？</h3><p class="note">${esc(r.venue)} ${r.raceNo}R<br>運用モード：<b>${investmentModeLabel()}</b><br>${rank}ランク：1点 ${yen(unit)} × ${racePoints(r)}点 = <b>${yen(inv)}</b><br>${String(r.date||'')>=OFFICIAL_START_DATE?'正式運用（9/17以降）':'LEGACY（正式集計外）'}として登録します。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn primary" onclick="SMART_SELECT.confirmBet('${esc(key)}')">確定</button></div>`)}
+function confirmBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;if(!officialEraStarted()&&String(r.date||'')>=OFFICIAL_START_DATE)initializeOfficialEra(state.currentFunds,true);const funds=activeFunds(),rank=rankForRace(r),unit=unitForRank(funds,rank),inv=unit*racePoints(r);if(funds<inv){toast('正式現在資金が予定投資額を下回っています');return}r.rankConfirmed=rank;r.investmentModeConfirmed=state.investmentMode;r.unitConfirmed=unit;r.investmentConfirmed=inv;r.status='結果待ち';r.betAt=new Date().toISOString();r.verificationEra=isVerifiedOperation(r)?'OFFICIAL_20260917_PLUS':'LEGACY_PRE_20260917';recalculateOperations();const nowFunds=activeFunds();appLog('PURCHASE_CONFIRMED',{key,era:r.verificationEra,mode:r.investmentModeConfirmed,rank:r.rankConfirmed,rate:COMPOUND_RATE[r.rankConfirmed],investment:inv,unitConfirmed:unit,funds:nowFunds});save();closeModal();toast(testMode?'テスト購入を運用台帳へ登録しました':isVerifiedOperation(r)?'正式運用へ購入登録しました':'LEGACYとして購入登録しました')}
 function openResult(key){const r=state.races.find(x=>x.key===key);if(!r)return;const unit=Number(r.unitConfirmed)||100;const mult=unit/100;showModal(`<h3>結果を反映</h3><p class="note">${esc(r.venue)} ${r.raceNo}R　投資 ${yen(r.investmentConfirmed||0)}<br>1点金額 ${yen(unit)}（WINTICKET確定払戻 × ${mult}倍）</p><div class="field"><label>WINTICKET確定払戻（100円）</label><input id="payoutInput" type="number" min="0" step="10" value="0" oninput="SMART_SELECT.updatePayoutPreview('${esc(key)}')"></div><div class="settingsCard" style="margin-top:10px"><div class="note">実際に受け取る払戻</div><div id="payoutPreview" style="font-size:28px;font-weight:900;margin-top:4px">${yen(0)}</div><div class="note">表示払戻 × ${mult}倍</div></div><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" onclick="SMART_SELECT.confirmResult('${esc(key)}')">払戻を確定</button></div>`)}
 function updatePayoutPreview(key){const r=state.races.find(x=>x.key===key),input=document.getElementById('payoutInput'),out=document.getElementById('payoutPreview');if(!r||!input||!out)return;const base=Math.max(0,Number(input.value)||0),unit=Number(r.unitConfirmed)||100,actual=Math.round(base*(unit/100));out.textContent=yen(actual)}
-function confirmResult(key){const r=state.races.find(x=>x.key===key),input=document.getElementById('payoutInput');if(!r||!input)return;const base=Math.max(0,Number(input.value)||0),unit=Number(r.unitConfirmed)||100,p=Math.round(base*(unit/100));r.payoutBase100=base;r.payout=p;r.status=p>0?'的中':'不的中';r.settledAt=new Date().toISOString();recalculateOperations();appLog('RESULT_CONFIRMED',{key,payoutBase100:base,unitConfirmed:unit,payout:p,profit:r.raceProfit,funds:state.currentFunds});save();closeModal();toast(testMode?'テスト結果を反映しました':'払戻・損益・現在資金を更新しました')}
+function confirmResult(key){const r=state.races.find(x=>x.key===key),input=document.getElementById('payoutInput');if(!r||!input)return;const base=Math.max(0,Number(input.value)||0),unit=Number(r.unitConfirmed)||100,p=Math.round(base*(unit/100));r.payoutBase100=base;r.payout=p;r.status=p>0?'的中':'不的中';r.settledAt=new Date().toISOString();recalculateOperations();appLog('RESULT_CONFIRMED',{key,payoutBase100:base,unitConfirmed:unit,payout:p,profit:r.raceProfit,funds:activeFunds()});save();closeModal();toast(testMode?'テスト結果を反映しました':'払戻・損益・正式現在資金を更新しました')}
 
 function openOperationEdit(key){
  const r=state.races.find(x=>x.key===key);if(!r||r.investmentConfirmed==null)return;
@@ -2165,7 +2211,7 @@ function openDetail(key){
    const y26t=y26!=null?(Number(y26)*100).toFixed(1)+'%':'—';
    return `<div class="settingsCard" style="margin-top:8px">
      <b>${name}</b>
-     <div class="detailBetLine"><strong>${betType}</strong> ｜ ${bets} ｜ 1点 ${yen(unitForRank(state.currentFunds,c.rank||'A'))}</div>
+     <div class="detailBetLine"><strong>${betType}</strong> ｜ ${bets} ｜ 1点 ${yen(unitForRank(activeFunds(),c.rank||'A'))}</div>
      <div class="detailGrid">
        <div class="detailMetric"><small>評価</small><b>${esc(c.stars||'')} / ${esc(c.rank||'A')}</b></div>
        <div class="detailMetric"><small>過去N</small><b>${esc(n)}R</b></div>
@@ -2641,7 +2687,7 @@ function confirmBackupRestore(){
 function exportLiveLog(){
  try{
   const logs=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');
-  const payload={build:'v3.2-safe-snapshot',exportedAt:new Date().toISOString(),mode:testMode?'TEST':'LIVE',stateSummary:{startFunds:state.startFunds,currentFunds:state.currentFunds,races:(state.races||[]).length,purchased:purchased().length,settled:settled().length,sync:state.sync||{}},logs};
+  const payload={build:'v3.22-official-era',exportedAt:new Date().toISOString(),mode:testMode?'TEST':'LIVE',stateSummary:{legacyStartFunds:state.startFunds,legacyCurrentFunds:state.currentFunds,officialEra:state.officialEra,officialCurrentFunds:activeFunds(),races:(state.races||[]).length,purchased:purchased().length,settled:settled().length,sync:state.sync||{}},logs};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`SMART_FINDER_SELECT_運用ログ_${todayStr()}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},300);appLog('LOG_EXPORTED',{count:logs.length});toast('運用ログを書き出しました');
  }catch(e){appLog('LOG_EXPORT_FAIL',{error:String(e)});toast('ログを書き出せませんでした')}
@@ -2660,8 +2706,8 @@ function confirmInvestmentMode(mode){
  if(old===mode){closeModal();return}
  state.investmentMode=mode;
  state.settingHistory=Array.isArray(state.settingHistory)?state.settingHistory:[];
- state.settingHistory.push({at:new Date().toISOString(),type:'investment_mode',old,new:mode,funds:Number(state.currentFunds)||0});
- appLog('INVESTMENT_MODE_CHANGED',{old,new:mode,label:investmentModeLabel(mode),funds:state.currentFunds});
+ state.settingHistory.push({at:new Date().toISOString(),type:'investment_mode',old,new:mode,funds:activeFunds()});
+ appLog('INVESTMENT_MODE_CHANGED',{old,new:mode,label:investmentModeLabel(mode),funds:activeFunds()});
  save();closeModal();toast(`運用モードを「${investmentModeLabel(mode)}」へ変更しました`);
 }
 
@@ -2679,7 +2725,7 @@ function confirmAdditionalFunds(amount,note=''){
  state.fundingHistory=Array.isArray(state.fundingHistory)?state.fundingHistory:[];
  state.fundingHistory.push({id:`fund-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,at:new Date().toISOString(),amount:amt,note:String(note||'')});
  recalculateOperations();
- appLog('ADDITIONAL_FUNDS_ADDED',{amount:amt,note:String(note||''),totalAdded:totalAddedFunds(),funds:state.currentFunds});
+ appLog('ADDITIONAL_FUNDS_ADDED',{amount:amt,note:String(note||''),totalAdded:totalAddedFunds(),funds:activeFunds()});
  save();closeModal();
  const input=document.getElementById('additionalFundsAmount'),noteEl=document.getElementById('additionalFundsNote');if(input)input.value='';if(noteEl)noteEl.value='';
  toast(`${yen(amt)}を追加資金として反映しました`);
@@ -2690,18 +2736,18 @@ function withdrawFunds(){
  const input=document.getElementById('withdrawalAmount'),noteEl=document.getElementById('withdrawalNote');
  const raw=Math.floor((Number(input?.value)||0)/100)*100;
  if(raw<100){toast('100円以上を100円単位で入力してください');return}
- if(raw>Number(state.currentFunds||0)){toast('現在資金を超える出金はできません');return}
+ if(raw>activeFunds()){toast('正式現在資金を超える出金はできません');return}
  const note=String(noteEl?.value||'').trim();
  showModal(`<h3>資金を出金しますか？</h3><p class="note">出金額：<b>${yen(raw)}</b><br>現在資金から差し引きますが、出金そのものは損失には含めません。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn danger" id="confirmWithdrawBtn">出金する</button></div>`);
  setTimeout(()=>{const b=document.getElementById('confirmWithdrawBtn');if(b)b.onclick=()=>confirmWithdrawal(raw,note)},0);
 }
 function confirmWithdrawal(amount,note=''){
  const amt=Math.floor((Number(amount)||0)/100)*100;
- if(amt<100||amt>Number(state.currentFunds||0))return;
+ if(amt<100||amt>activeFunds())return;
  state.withdrawalHistory=Array.isArray(state.withdrawalHistory)?state.withdrawalHistory:[];
  state.withdrawalHistory.push({id:`withdraw-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,at:new Date().toISOString(),amount:amt,note:String(note||'')});
  recalculateOperations();
- appLog('FUNDS_WITHDRAWN',{amount:amt,note:String(note||''),totalWithdrawn:totalWithdrawnFunds(),funds:state.currentFunds,profit:profitTotal()});
+ appLog('FUNDS_WITHDRAWN',{amount:amt,note:String(note||''),totalWithdrawn:totalWithdrawnFunds(),funds:activeFunds(),profit:officialFinancialState().profit});
  save();closeModal();
  const input=document.getElementById('withdrawalAmount'),noteEl=document.getElementById('withdrawalNote');if(input)input.value='';if(noteEl)noteEl.value='';
  toast(`${yen(amt)}を出金として反映しました`);
@@ -2746,7 +2792,15 @@ function renderMissResearchSummary(){
  e.textContent=`不的中 ${rows.length}件｜着順入力済み ${complete}件｜未入力 ${rows.length-complete}件`;
 }
 
-window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog,exportFullBackup,chooseBackupRestore,readBackupRestoreFile,confirmBackupRestore,saveAutoSchedule,requestInvestmentMode,confirmInvestmentMode,addAdditionalFunds,confirmAdditionalFunds,withdrawFunds,confirmWithdrawal,exportMissResearchCsv,deviceSyncNow};
+function requestOfficialEraReset(){
+ if(testMode){toast('正式運用リセットは本番モードで行ってください');return}
+ const input=document.getElementById('officialStartFundsInput'),amount=Math.max(100,Math.floor((Number(input?.value)||activeFunds())/100)*100);
+ const warning=officialEraStarted()?'<br><b>すでに正式運用開始済みです。開始資金を訂正すると9月17日以降を全件再計算します。</b>':'<br>9月16日以前の購入・結果は削除せず、LEGACYとして正式集計から外します。';
+ showModal(`<h3>正式運用を設定しますか？</h3><p class="note">開始日：<b>2026年9月17日</b><br>開始資金：<b>${yen(amount)}</b>${warning}</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn primary" onclick="SMART_SELECT.confirmOfficialEraReset(${amount})">設定する</button></div>`);
+}
+function confirmOfficialEraReset(amount){initializeOfficialEra(amount,false);save();closeModal();toast('9月17日からの正式資産を再計算しました')}
+
+window.SMART_SELECT={receive,markBet,confirmBet,openResult,confirmResult,openDetail,closeModal,restoreSetting,confirmRestore,syncFromSmartFinder,startSmartFinder,retrySmartFinder,stopSmartFinder,enterTestMode,exitTestMode,clearTestData,updatePayoutPreview,openOperationEdit,confirmOperationEdit,openOperationDelete,confirmOperationDelete,exportLiveLog,exportFullBackup,chooseBackupRestore,readBackupRestoreFile,confirmBackupRestore,saveAutoSchedule,requestInvestmentMode,confirmInvestmentMode,addAdditionalFunds,confirmAdditionalFunds,withdrawFunds,confirmWithdrawal,exportMissResearchCsv,deviceSyncNow,requestOfficialEraReset,confirmOfficialEraReset};
 window.addEventListener('message',e=>{if(e.data?.type==='SMART_FINDER_RESULTS'&&e.data.races)receive(e.data.races)});
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
  document.querySelectorAll('.tab,.page').forEach(x=>x.classList.remove('active'));
@@ -2766,6 +2820,7 @@ const modeAttackBtn=document.getElementById('modeAttackBtn');if(modeAttackBtn)mo
 const modeDefenseBtn=document.getElementById('modeDefenseBtn');if(modeDefenseBtn)modeDefenseBtn.onclick=()=>requestInvestmentMode('defense');
 const addFundsBtn=document.getElementById('addFundsBtn');if(addFundsBtn)addFundsBtn.onclick=addAdditionalFunds;
 const withdrawFundsBtn=document.getElementById('withdrawFundsBtn');if(withdrawFundsBtn)withdrawFundsBtn.onclick=withdrawFunds;
+const officialEraResetBtn=document.getElementById('officialEraResetBtn');if(officialEraResetBtn)officialEraResetBtn.onclick=requestOfficialEraReset;
 const exportMissResearchBtn=document.getElementById('exportMissResearchBtn');if(exportMissResearchBtn)exportMissResearchBtn.onclick=exportMissResearchCsv;
 const deviceSyncNowBtn=document.getElementById('deviceSyncNowBtn');if(deviceSyncNowBtn)deviceSyncNowBtn.onclick=deviceSyncNow;
 document.getElementById('importBtn').onclick=()=>{if(testMode){toast('テストモード中は本番検索結果を取り込みません');return}try{const j=JSON.parse(document.getElementById('importJson').value);receive(j)}catch(e){toast('JSON形式を確認してください')}};
@@ -2785,9 +2840,9 @@ const pcHeroSelectBtn=document.getElementById('pcHeroSelectBtn');if(pcHeroSelect
 const pcHeroCapitalBtn=document.getElementById('pcHeroCapitalBtn');if(pcHeroCapitalBtn)pcHeroCapitalBtn.onclick=()=>{const t=document.querySelector('.tab[data-page="operation"]')||document.querySelector('.tab[data-page="manage"]');if(t)t.click();else document.querySelector('.operationOverview')?.scrollIntoView({behavior:'smooth',block:'start'})};
 const pcHeroResultBtn=document.getElementById('pcHeroResultBtn');if(pcHeroResultBtn)pcHeroResultBtn.onclick=()=>{const t=document.querySelector('.tab[data-page="history"]');if(t)t.click()};
 ensureTestRace();
-appLog('APP_START',{version:'v3.2-safe-snapshot',testMode});
+appLog('APP_START',{version:'v3.22-official-era',testMode});
 window.addEventListener('error',e=>appLog('WINDOW_ERROR',{message:e.message||'',source:e.filename||'',line:e.lineno||0}));
-appLog('LIVE_TRIAL_READY',{date:todayStr(),currentFunds:state.currentFunds,races:(state.races||[]).length});appLog('VERIFIED_STATS_EPOCH',{startAt:VERIFIED_STATS_START_AT,verifiedPurchases:verifiedPurchased().length,totalPurchases:purchased().length});
+appLog('LIVE_TRIAL_READY',{date:todayStr(),currentFunds:activeFunds(),races:(state.races||[]).length});appLog('OFFICIAL_ERA_EPOCH',{startAt:OFFICIAL_START_AT,officialPurchases:verifiedPurchased().length,legacyPurchases:purchased().filter(r=>!isVerifiedOperation(r)).length});
 renderAll();
 initializeDeviceSync();
 setInterval(()=>pullCloudState(true),5000);
