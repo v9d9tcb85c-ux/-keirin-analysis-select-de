@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>WINTICKET SMART FINDER SELECT / v3.22 OFFICIAL ERA</title>
+<title>[候補混在修正 20260918] WINTICKET SMART FINDER SELECT / v3.22 OFFICIAL ERA</title>
 <style>
 :root{
   --bg:#040716; --bg2:#0b1026; --panel:#0c1330; --panel2:#141d46; --card:#0a1330; --line:#6f5cff;
@@ -1605,6 +1605,39 @@ function enrichRaceCandidates(r){if(!r)return r;r.candidates=(r.candidates||[]).
 
 const initial=()=>({version:10,investmentMode:'attack',startFunds:30000,currentFunds:30000,officialEra:{startDate:'2026-09-17',startedAt:null,configuredAt:null,startFunds:null,legacySnapshot:null},candidates:{"ALL-001":true,"ALL-002":true,"ALL-003":true,"ALL-004":true,"ALL-005":true,"ALL-006":true,"ALL-007":true,"ALL-008":true,"ALL-009":true,"ALL-010":true,"OTH-001":true,"OTH-002":true,"OTH-003":true,"OTH-004":true,"OTH-005":true,"OTH-006":true,"OTH-007":true,"OTH-008":true,"OTH-009":true,"OTH-010":true,"OTH-011":true,"OTH-012":true,"OTH-013":true,"OTH-014":true,"OTH-015":true,"OTH-016":true,"OTH-017":true},settingHistory:[],moneyHistory:[],fundingHistory:[],withdrawalHistory:[],races:[],capital:[{at:new Date().toISOString(),value:30000,type:'開始'}],sync:{imported:0,lastAt:null,lastPhase:'',lastError:''}});
 let state=load(), editMode=false, draftCandidates={...state.candidates}, moneyEdit=false;
+// Pending candidate safety fix 2026-09-18. Purchased records are immutable here.
+function cleanPendingCandidates(items){
+ if(!Array.isArray(items))return [];
+ const valid=items.filter(c=>c&&Object.prototype.hasOwnProperty.call(candidateDefs,String(c.id||c.ruleId||c.rule_id||''))).map(c=>{
+  const id=String(c.id||c.ruleId||c.rule_id),bets=[...new Set((Array.isArray(c.bets)?c.bets:[]).map(x=>String(x).trim()).filter(Boolean))];
+  return {...c,id,ruleId:id,bets,points:bets.length};
+ });
+ // More than one rule must be resolved by the search engine, never by the ledger.
+ if(valid.length!==1)return [];
+ const c=valid[0],rule=profitRuleById(c.id),count=/3連/.test(rule.bet_type)?3:2;
+ if(!c.bets.length||c.bets.some(b=>{const ns=b.match(/[1-7]/g)||[];return !/^[1-7](?:[-=][1-7]){1,2}$/.test(b)||ns.length!==count||new Set(ns).size!==count}))return [];
+ return valid;
+}
+function archivePendingCandidates(r){
+ if(!r.candidates?.length)return;
+ r.candidateArchive=Array.isArray(r.candidateArchive)?r.candidateArchive:[];
+ const serialized=JSON.stringify(r.candidates);
+ if(!r.candidateArchive.some(x=>JSON.stringify(x.candidates)===serialized))r.candidateArchive.push({at:new Date().toISOString(),reason:'pending-replacement-20260918',candidates:JSON.parse(serialized)});
+}
+function migratePendingCandidates(r){
+ if(r.investmentConfirmed!=null||(r.status||'投票待ち')!=='投票待ち')return;
+ if(r.manualBets?.length){r.previousManualBets=r.manualBets;delete r.manualBets}
+ const clean=cleanPendingCandidates(r.candidates);
+ if(JSON.stringify(clean)!==JSON.stringify(r.candidates||[]))archivePendingCandidates(r);
+ r.candidates=clean;
+ r.pendingValidationError=clean.length?'':'候補未確認：修正版PCで再検索してください';
+}
+function canRegisterPending(r){
+ if(!r||r.status!=='投票待ち'||r.investmentConfirmed!=null)return false;
+ const clean=cleanPendingCandidates(r.candidates);
+ return clean.length===1&&JSON.stringify(clean)===JSON.stringify(r.candidates)&&!r.pendingValidationError;
+}
+
 function normalizeLoaded(raw){
  const base=initial(), merged={...base,...(raw&&typeof raw==='object'?raw:{})};
  merged.candidates={...base.candidates};
@@ -1618,10 +1651,7 @@ function normalizeLoaded(raw){
  merged.version=10;
  merged.races.forEach(r=>{
   if(!r.grade)r.grade=r.classGrade||'';
-  if(r.investmentConfirmed==null && (r.status||'投票待ち')==='投票待ち'){
-   const mapped=currentSelectCandidates(r.venue||'',r.line||'',r.threeOrder||r.three_order||'');
-   if(mapped.length)r.candidates=mapped;
-  }
+  migratePendingCandidates(r);
   enrichRaceCandidates(r);
  });
  return merged;
@@ -1711,7 +1741,7 @@ function verifiedPurchased(){return purchased().filter(isVerifiedOperation)}
 function verifiedSettled(){return verifiedPurchased().filter(r=>['的中','不的中'].includes(r.status))}
 function verifiedPerformance(){return statsForRaceList(verifiedPurchased())}
 function parseBetsText(v){return String(v||'').split(/[、,，\s]+/).map(x=>x.trim()).filter(Boolean)}
-function racePoints(r){if(Array.isArray(r.manualBets)&&r.manualBets.length)return r.manualBets.length;return (r.candidates||[]).reduce((s,c)=>s+(Number(c.points)||((c.bets||[]).length)||1),0)}
+function racePoints(r){if(r.investmentConfirmed==null)return raceBets(r).length;if(Array.isArray(r.manualBets)&&r.manualBets.length)return r.manualBets.length;return (r.candidates||[]).reduce((s,c)=>s+(Number(c.points)||((c.bets||[]).length)||1),0)}
 function plannedInvestment(r){return r.investmentConfirmed!=null?r.investmentConfirmed:unitForRace(r,activeFunds())*racePoints(r)}
 function settled(){return state.races.filter(r=>['的中','不的中'].includes(r.status))}
 function investedTotal(){return settled().reduce((s,r)=>s+(r.investmentConfirmed||0),0)}
@@ -1723,7 +1753,7 @@ function hitCount(){return settled().filter(r=>r.status==='的中').length}
 function purchased(){return state.races.filter(r=>r.status!=='投票待ち' && r.investmentConfirmed!=null)}
 function purchasedTotal(){return purchased().reduce((s,r)=>s+(Number(r.investmentConfirmed)||0),0)}
 function operationPayoutTotal(){return purchased().reduce((s,r)=>s+(Number(r.payout)||0),0)}
-function raceBets(r){return Array.isArray(r.manualBets)&&r.manualBets.length?r.manualBets:(r.candidates||[]).flatMap(c=>c.bets||[])}
+function raceBets(r){const bets=Array.isArray(r.manualBets)&&r.manualBets.length?r.manualBets:(r.candidates||[]).flatMap(c=>c.bets||[]);return r.investmentConfirmed!=null?bets:[...new Set(bets)]}
 function operationSort(a,b){return `${a.betAt||a.date||''}${a.startTime||''}${a.key||''}`.localeCompare(`${b.betAt||b.date||''}${b.startTime||''}${b.key||''}`)}
 function recalculateOperations(){
  const list=[...purchased()].sort(operationSort);
@@ -1824,7 +1854,7 @@ function boardOrder(a,b){
 function nextTargetHtml(r){
  if(!r)return '<div class="empty nextEmpty">本日の未確定レースはありません。</div>';
  const inv=plannedInvestment(r),pts=racePoints(r),unit=r.investmentConfirmed!=null?r.unitConfirmed:unitForRace(r,activeFunds()),tags=(r.candidates||[]).map(c=>candTag(c.id)).join('');
- const action=r.status==='投票待ち'?`<button class="btn primary" onclick="SMART_SELECT.markBet('${esc(r.key)}')">購入登録</button>`:r.status==='結果待ち'?`<button class="btn save" onclick="SMART_SELECT.openResult('${esc(r.key)}')">結果を入力</button>`:'';
+ const action=r.status==='投票待ち'?(canRegisterPending(r)?`<button class="btn primary" onclick="SMART_SELECT.markBet('${esc(r.key)}')">購入登録</button>`:'<button class="btn" disabled>候補未確認・再検索が必要</button>'):r.status==='結果待ち'?`<button class="btn save" onclick="SMART_SELECT.openResult('${esc(r.key)}')">結果を入力</button>`:'';
  return `<div class="nextTargetCard"><div class="nextVenue"><span>${esc(r.venue)}</span><b>${esc(r.raceNo)}R</b></div><div class="nextBody"><div class="nextMetaLine"><span>▣ ${esc(r.date)}</span><span>${esc(r.grade||'—')}</span><span>${esc(r.timeBand||'—')}</span><span>${esc(r.line||'—')}</span></div><div class="nextInfoLine"><div class="nextTags">${tags}${statusBadge(r.status)}</div><div class="nextMetric"><small>1点金額</small><b>${yen(unit)}</b></div><div class="nextMetric"><small>点数</small><b>${pts}点</b></div><div class="nextMetric"><small>払戻</small><b>${r.payout!=null?yen(r.payout):'—'}</b></div></div></div><div class="nextActions">${action}<button class="btn" onclick="SMART_SELECT.openDetail('${esc(r.key)}')">詳細</button><span class="nextInvestment">${yen(inv)}<small>予定/確定投資</small></span></div></div>`;
 }
 
@@ -2131,9 +2161,34 @@ function renderAll(){
  safeRender('stats',renderStats);
  safeRender('settings',renderSettings);
 }
-function receive(races,options={}){if(!Array.isArray(races))races=[races];let added=0,merged=0,skipped=0;for(const raw of races){if(!raw||!raw.date||!raw.venue||raw.raceNo==null)continue;const key=keyOf(raw);let r=state.races.find(x=>x.key===key);const incoming=(raw.candidates||[]).filter(c=>state.candidates[c.id]!==false).map(c=>enrichCandidateStats({...c,id:c.id||c.ruleId||c.rule_id,points:Number(c.points)||((c.bets||[]).length)||1,bets:c.bets||candidateDefs[c.id]?.bets||[]},raw));if(!incoming.length){skipped++;continue}if(!r){r={key,date:raw.date,venue:raw.venue,raceNo:Number(raw.raceNo),grade:raw.grade||raw.classGrade||'',startTime:raw.startTime||'',timeBand:raw.timeBand||'',candidates:[],status:'投票待ち',createdAt:new Date().toISOString(),source:raw.source||'',line:raw.line||'',threeOrder:raw.threeOrder||'',bankGroup:raw.bankGroup||bankGroupOf(raw.venue),predictionUrl:raw.predictionUrl||'',shadowOos:raw.shadowOos||[]};state.races.push(r);added++}else merged++;for(const c of incoming){const ex=r.candidates.find(x=>x.id===c.id);if(!ex)r.candidates.push(c);else{Object.assign(ex,c);ex.bets=[...new Set([...(ex.bets||[]),...(c.bets||[])])];ex.points=Math.max(ex.points||0,c.points||0)}}r.shadowOos=raw.shadowOos||r.shadowOos||[];r.startTime=raw.startTime||r.startTime;r.timeBand=raw.timeBand||r.timeBand;r.grade=raw.grade||raw.classGrade||r.grade||'';r.line=raw.line||r.line||'';r.threeOrder=raw.threeOrder||r.threeOrder||'';r.bankGroup=raw.bankGroup||r.bankGroup||bankGroupOf(r.venue);r.predictionUrl=raw.predictionUrl||r.predictionUrl||'';r.source=raw.source||r.source||''}if(added||merged){localStorage.setItem(storageKey(),JSON.stringify(state));renderAll()}if(!options.silent)toast(`取込完了：新規 ${added} / 統合 ${merged}${skipped?` / 除外 ${skipped}`:''}`);return {added,merged,skipped}}
-function markBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;const funds=activeFunds(),rank=rankForRace(r),unit=unitForRank(funds,rank),inv=unit*racePoints(r);if(funds<inv){toast('正式現在資金が予定投資額を下回っています');return}showModal(`<h3>購入登録しますか？</h3><p class="note">${esc(r.venue)} ${r.raceNo}R<br>運用モード：<b>${investmentModeLabel()}</b><br>${rank}ランク：1点 ${yen(unit)} × ${racePoints(r)}点 = <b>${yen(inv)}</b><br>${String(r.date||'')>=OFFICIAL_START_DATE?'正式運用（9/17以降）':'LEGACY（正式集計外）'}として登録します。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn primary" onclick="SMART_SELECT.confirmBet('${esc(key)}')">確定</button></div>`)}
-function confirmBet(key){const r=state.races.find(x=>x.key===key);if(!r||r.status!=='投票待ち')return;if(!officialEraStarted()&&String(r.date||'')>=OFFICIAL_START_DATE)initializeOfficialEra(state.currentFunds,true);const funds=activeFunds(),rank=rankForRace(r),unit=unitForRank(funds,rank),inv=unit*racePoints(r);if(funds<inv){toast('正式現在資金が予定投資額を下回っています');return}r.rankConfirmed=rank;r.investmentModeConfirmed=state.investmentMode;r.unitConfirmed=unit;r.investmentConfirmed=inv;r.status='結果待ち';r.betAt=new Date().toISOString();r.verificationEra=isVerifiedOperation(r)?'OFFICIAL_20260917_PLUS':'LEGACY_PRE_20260917';recalculateOperations();const nowFunds=activeFunds();appLog('PURCHASE_CONFIRMED',{key,era:r.verificationEra,mode:r.investmentModeConfirmed,rank:r.rankConfirmed,rate:COMPOUND_RATE[r.rankConfirmed],investment:inv,unitConfirmed:unit,funds:nowFunds});save();closeModal();toast(testMode?'テスト購入を運用台帳へ登録しました':isVerifiedOperation(r)?'正式運用へ購入登録しました':'LEGACYとして購入登録しました')}
+function receive(races,options={}){
+ if(!Array.isArray(races))races=[races];
+ let added=0,merged=0,skipped=0;
+ for(const raw of races){
+  if(!raw||!raw.date||!raw.venue||raw.raceNo==null)continue;
+  const key=keyOf(raw);let r=state.races.find(x=>x.key===key);
+  // Never change purchased bets, investment, rank, or result through search/sync.
+  if(r&&(r.investmentConfirmed!=null||r.status!=='投票待ち')){skipped++;continue}
+  const clean=cleanPendingCandidates(raw.candidates);
+  const incoming=clean.filter(c=>state.candidates[c.id]!==false).map(c=>enrichCandidateStats(c,raw));
+  if(!incoming.length){
+   if(r){archivePendingCandidates(r);r.candidates=[];r.pendingValidationError='候補未確認：修正版PCで再検索してください';merged++}
+   skipped++;continue;
+  }
+  if(!r){r={key,date:raw.date,venue:raw.venue,raceNo:Number(raw.raceNo),candidates:[],status:'投票待ち',createdAt:new Date().toISOString()};state.races.push(r);added++}else merged++;
+  if(JSON.stringify(r.candidates)!==JSON.stringify(incoming))archivePendingCandidates(r);
+  r.candidates=incoming;r.pendingValidationError='';
+  // Manual pending tickets must not override a fresh search result.
+  if(r.manualBets?.length){r.previousManualBets=r.manualBets;delete r.manualBets}
+  for(const name of ['startTime','timeBand','grade','line','threeOrder','bankGroup','predictionUrl','source'])r[name]=raw[name]||r[name]||'';
+  r.shadowOos=raw.shadowOos||[];
+ }
+ if(added||merged){localStorage.setItem(storageKey(),JSON.stringify(state));renderAll()}
+ if(!options.silent)toast(`取込完了：新規 ${added} / 更新 ${merged} / 保留・除外 ${skipped}`);
+ return {added,merged,skipped};
+}
+function markBet(key){const r=state.races.find(x=>x.key===key);if(!canRegisterPending(r)){toast('候補が未確認または混在しています。修正版PCで再検索してください');return;}const funds=activeFunds(),rank=rankForRace(r),unit=unitForRank(funds,rank),inv=unit*racePoints(r);if(funds<inv){toast('正式現在資金が予定投資額を下回っています');return}showModal(`<h3>購入登録しますか？</h3><p class="note">${esc(r.venue)} ${r.raceNo}R<br>運用モード：<b>${investmentModeLabel()}</b><br>${rank}ランク：1点 ${yen(unit)} × ${racePoints(r)}点 = <b>${yen(inv)}</b><br>${String(r.date||'')>=OFFICIAL_START_DATE?'正式運用（9/17以降）':'LEGACY（正式集計外）'}として登録します。</p><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn primary" onclick="SMART_SELECT.confirmBet('${esc(key)}')">確定</button></div>`)}
+function confirmBet(key){const r=state.races.find(x=>x.key===key);if(!canRegisterPending(r)){toast('候補が未確認または混在しています。修正版PCで再検索してください');return;}if(!officialEraStarted()&&String(r.date||'')>=OFFICIAL_START_DATE)initializeOfficialEra(state.currentFunds,true);const funds=activeFunds(),rank=rankForRace(r),unit=unitForRank(funds,rank),inv=unit*racePoints(r);if(funds<inv){toast('正式現在資金が予定投資額を下回っています');return}r.rankConfirmed=rank;r.investmentModeConfirmed=state.investmentMode;r.unitConfirmed=unit;r.investmentConfirmed=inv;r.status='結果待ち';r.betAt=new Date().toISOString();r.verificationEra=isVerifiedOperation(r)?'OFFICIAL_20260917_PLUS':'LEGACY_PRE_20260917';recalculateOperations();const nowFunds=activeFunds();appLog('PURCHASE_CONFIRMED',{key,era:r.verificationEra,mode:r.investmentModeConfirmed,rank:r.rankConfirmed,rate:COMPOUND_RATE[r.rankConfirmed],investment:inv,unitConfirmed:unit,funds:nowFunds});save();closeModal();toast(testMode?'テスト購入を運用台帳へ登録しました':isVerifiedOperation(r)?'正式運用へ購入登録しました':'LEGACYとして購入登録しました')}
 function openResult(key){const r=state.races.find(x=>x.key===key);if(!r)return;const unit=Number(r.unitConfirmed)||100;const mult=unit/100;showModal(`<h3>結果を反映</h3><p class="note">${esc(r.venue)} ${r.raceNo}R　投資 ${yen(r.investmentConfirmed||0)}<br>1点金額 ${yen(unit)}（WINTICKET確定払戻 × ${mult}倍）</p><div class="field"><label>WINTICKET確定払戻（100円）</label><input id="payoutInput" type="number" min="0" step="10" value="0" oninput="SMART_SELECT.updatePayoutPreview('${esc(key)}')"></div><div class="settingsCard" style="margin-top:10px"><div class="note">実際に受け取る払戻</div><div id="payoutPreview" style="font-size:28px;font-weight:900;margin-top:4px">${yen(0)}</div><div class="note">表示払戻 × ${mult}倍</div></div><div class="modalBtns"><button class="btn" onclick="SMART_SELECT.closeModal()">戻る</button><button class="btn save" onclick="SMART_SELECT.confirmResult('${esc(key)}')">払戻を確定</button></div>`)}
 function updatePayoutPreview(key){const r=state.races.find(x=>x.key===key),input=document.getElementById('payoutInput'),out=document.getElementById('payoutPreview');if(!r||!input||!out)return;const base=Math.max(0,Number(input.value)||0),unit=Number(r.unitConfirmed)||100,actual=Math.round(base*(unit/100));out.textContent=yen(actual)}
 function confirmResult(key){const r=state.races.find(x=>x.key===key),input=document.getElementById('payoutInput');if(!r||!input)return;const base=Math.max(0,Number(input.value)||0),unit=Number(r.unitConfirmed)||100,p=Math.round(base*(unit/100));r.payoutBase100=base;r.payout=p;r.status=p>0?'的中':'不的中';r.settledAt=new Date().toISOString();recalculateOperations();appLog('RESULT_CONFIRMED',{key,payoutBase100:base,unitConfirmed:unit,payout:p,profit:r.raceProfit,funds:activeFunds()});save();closeModal();toast(testMode?'テスト結果を反映しました':'払戻・損益・正式現在資金を更新しました')}
@@ -2252,6 +2307,7 @@ function normalizeSmartFinderMatch(m){
  const line=String(m.line??m.line_pattern??m.linePattern??'').trim();
  const threeOrder=String(m.three_order??m.threeOrder??m.ai_line_order??m.line_marks??m.mark_order??m.condition_name??'').trim();
  let candidates=[];
+ if(m.rule_id&&!Object.prototype.hasOwnProperty.call(candidateDefs,String(m.rule_id)))return null;
  if(m.rule_id){
    const tickets=Array.isArray(m.tickets)?m.tickets:(m.bet?[String(m.bet)]:[]);
    candidates=[enrichCandidateStats({id:String(m.rule_id),ruleId:String(m.rule_id),rank:String(m.rank||((m.decision||m.final_decision||'CHECK')==='BET'?'S':'A')),decision:String(m.final_decision||m.decision||''),stars:String(m.stars||''),bankGroup:String(m.bank_group||bankGroupOf(venue)),points:Number(m.points)||tickets.length||1,bets:tickets,betType:String(m.bet_type||'3連単'),roi:m.roi==null?null:Number(m.roi),roiEx1:m.roi_ex_top1==null?null:Number(m.roi_ex_top1),roiEx3:m.roi_ex_top3==null?null:Number(m.roi_ex_top3),hitRate:m.hit_rate==null?null:Number(m.hit_rate),avgPayout:m.avg_payout==null?null:Number(m.avg_payout),sampleN:(m.sample_n??m.N)==null?null:Number(m.sample_n??m.N),roi2025:(m.roi_2025??m.roi2025)==null?null:Number(m.roi_2025??m.roi2025),roi2026:(m.roi_2026??m.roi2026)==null?null:Number(m.roi_2026??m.roi2026),yearly:m.yearly||null,tier:String(m.tier||''),reason:String(m.decision_reason||m.reason||m.note||''),modifier:m.modifier||null,shadowOos:Array.isArray(m.shadow_oos)?m.shadow_oos:[]},{venue,bankGroup:String(m.bank_group||bankGroupOf(venue))})];
@@ -2471,6 +2527,7 @@ function reconcileSmartFinderBoard(matches,st){
  const before=state.races.length;
  state.races=state.races.filter(r=>{
   const isLiveCandidate=r.source==='smart_finder'&&r.date===todayStr()&&r.status==='投票待ち'&&r.investmentConfirmed==null;
+  if(isLiveCandidate&&!keep.has(r.key)){state.retiredPending=state.retiredPending||[];state.retiredPending.push({at:new Date().toISOString(),reason:'completed-search-replacement',race:JSON.parse(JSON.stringify(r))})}
   return !isLiveCandidate||keep.has(r.key);
  });
  const removed=before-state.races.length;
